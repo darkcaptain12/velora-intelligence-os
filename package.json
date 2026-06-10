@@ -1,0 +1,46 @@
+{
+  "name": "velora-ai-commerce-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VELORA AI COMMERCE OS — yapay zeka destekli tam otomasyonlu e-ticaret operasyon sistemi",
+  "packageManager": "pnpm@10.30.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "db:generate": "pnpm --filter @velora/db run generate",
+    "db:migrate": "pnpm --filter @velora/db run migrate",
+    "db:deploy": "pnpm --filter @velora/db run deploy",
+    "db:seed": "pnpm --filter @velora/db run seed",
+    "db:studio": "pnpm --filter @velora/db run studio",
+    "dev:web": "pnpm --filter @velora/web run dev",
+    "dev:worker": "pnpm --filter @velora/worker run dev",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "infra:logs": "docker compose -f infra/docker-compose.yml logs -f",
+    "setup": "pnpm install && pnpm db:generate && pnpm infra:up"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.4",
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "msgpackr-extract",
+      "sharp"
+    ],
+    "overrides": {
+      "ioredis": "5.11.1"
+    }
+  }
+}

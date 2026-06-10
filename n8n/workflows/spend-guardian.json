@@ -1,0 +1,36 @@
+{
+  "name": "VELORA — Spend Guardian (saatlik)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 * * * *" }] }
+      },
+      "id": "cron-hourly",
+      "name": "Saatlik",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://web:3000/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"guardian.check\",\"queue\":\"spendGuardian\"}",
+        "options": {}
+      },
+      "id": "guardian",
+      "name": "Acil Durum Koruması",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {
+    "Saatlik": { "main": [[{ "node": "Acil Durum Koruması", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Env & secrets — ASLA commit edilmez
+.env
+.env.*
+!.env.example
+infra/.env
+*.pem
+*.key
+
+# Prisma
+packages/db/prisma/*.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# Docker volumes (local)
+infra/data/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Turbo
+.turbo/
+
+# Test
+coverage/
+test-results/
+playwright-report/

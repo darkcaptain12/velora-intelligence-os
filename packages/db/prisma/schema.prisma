@@ -1,0 +1,721 @@
+// VELORA AI COMMERCE OS — Veritabanı şeması
+// Çok markalı (multi-brand) yapı: neredeyse tüm tablolar brandId taşır.
+// Detaylı tasarım: docs/ARCHITECTURE.md §5
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ÇEKİRDEK / AUTH / MARKA
+// ============================================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         Role     @default(OWNER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  active    Boolean  @default(true)
+  currency  String   @default("TRY")
+  taxRate   Decimal  @default(0.20) @db.Decimal(5, 4)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // İlişkiler (back-relations)
+  credentials      ApiCredential[]
+  settings         Setting[]
+  auditLogs        AuditLog[]
+  researchRuns     ResearchRun[]
+  trends           Trend[]
+  competitors      Competitor[]
+  designBriefs     DesignBrief[]
+  designs          Design[]
+  mockups          Mockup[]
+  videos           Video[]
+  products         Product[]
+  collections      ShopifyCollection[]
+  healthChecks     ShopifyHealthCheck[]
+  adCampaigns      AdCampaign[]
+  adMetrics        AdMetric[]
+  creativeTests    CreativeTest[]
+  suppliers        Supplier[]
+  emails           EmailMessage[]
+  orders           Order[]
+  financeSnapshots FinanceSnapshot[]
+  operationScores  OperationScore[]
+  aiReports        AIReport[]
+  tasks            Task[]
+  jobs             Job[]
+  spendLimits      SpendLimit[]
+  backups          Backup[]
+  usageLogs        UsageLog[]
+}
+
+model ApiCredential {
+  id           String   @id @default(cuid())
+  brandId      String
+  provider     Provider
+  keyEncrypted String // AES-256-GCM (packages/shared crypto)
+  meta         Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, provider])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  brandId   String
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, key])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  brandId       String
+  actor         String // "system" | "ai" | userId
+  action        String
+  entity        String
+  entityId      String?
+  payload       Json?
+  autonomyLevel Int      @default(2)
+  createdAt     DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, createdAt])
+}
+
+// ============================================================
+// ÜRÜN ARAŞTIRMA / TREND / RAKİP
+// ============================================================
+
+model ResearchRun {
+  id         String           @id @default(cuid())
+  brandId    String
+  source     Source
+  status     JobStatus        @default(QUEUED)
+  query      String?
+  createdAt  DateTime         @default(now())
+  finishedAt DateTime?
+  brand      Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  results    ResearchResult[]
+
+  @@index([brandId, source])
+}
+
+model ResearchResult {
+  id               String   @id @default(cuid())
+  runId            String
+  title            String
+  url              String?
+  demandScore      Float    @default(0)
+  competitionScore Float    @default(0)
+  salesPotential   Float    @default(0)
+  profitScore      Float    @default(0)
+  raw              Json
+  createdAt        DateTime @default(now())
+
+  run ResearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+}
+
+model Trend {
+  id        String   @id @default(cuid())
+  brandId   String
+  week      String // ISO hafta etiketi: 2026-W23
+  niche     String
+  theme     String
+  score     Float    @default(0)
+  source    Source
+  createdAt DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, week])
+}
+
+model Competitor {
+  id        String              @id @default(cuid())
+  brandId   String
+  name      String
+  url       String
+  createdAt DateTime            @default(now())
+  brand     Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  products  CompetitorProduct[]
+  ads       CompetitorAd[]
+
+  @@index([brandId])
+}
+
+model CompetitorProduct {
+  id           String   @id @default(cuid())
+  competitorId String
+  title        String
+  price        Decimal  @db.Decimal(12, 2)
+  currency     String   @default("TRY")
+  url          String?
+  seenAt       DateTime @default(now())
+
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@index([competitorId, seenAt])
+}
+
+model CompetitorAd {
+  id           String   @id @default(cuid())
+  competitorId String
+  platform     String
+  creativeUrl  String?
+  copy         String?
+  seenAt       DateTime @default(now())
+
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@index([competitorId, seenAt])
+}
+
+// ============================================================
+// TASARIM / MOCKUP / VIDEO
+// ============================================================
+
+model DesignBrief {
+  id             String   @id @default(cuid())
+  brandId        String
+  summary        String
+  targetAudience String
+  trendRefs      Json     @default("[]")
+  createdAt      DateTime @default(now())
+
+  brand   Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  designs Design[]
+
+  @@index([brandId])
+}
+
+model Design {
+  id             String      @id @default(cuid())
+  brandId        String
+  briefId        String?
+  prompt         String
+  svgUrl         String?
+  pngUrl         String?
+  transparentUrl String?
+  printReadyUrl  String?
+  scores         Json? // { sellability, trend, ad, audience }
+  status         AssetStatus @default(DRAFT)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  brand    Brand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brief    DesignBrief? @relation(fields: [briefId], references: [id], onDelete: SetNull)
+  mockups  Mockup[]
+  products Product[]
+
+  @@index([brandId, status])
+}
+
+model Mockup {
+  id        String     @id @default(cuid())
+  brandId   String
+  designId  String
+  type      MockupType
+  url       String
+  createdAt DateTime   @default(now())
+
+  brand  Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+  @@index([designId])
+}
+
+model Video {
+  id        String      @id @default(cuid())
+  brandId   String
+  productId String?
+  type      VideoType
+  url       String?
+  status    AssetStatus @default(DRAFT)
+  createdAt DateTime    @default(now())
+
+  brand   Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([brandId, status])
+}
+
+// ============================================================
+// ÜRÜN & YAŞAM DÖNGÜSÜ
+// ============================================================
+
+model Product {
+  id          String          @id @default(cuid())
+  brandId     String
+  title       String
+  description String?
+  status      LifecycleStatus @default(NEW)
+  designId    String?
+  shopifyId   String?
+  cost        Decimal?        @db.Decimal(12, 2)
+  price       Decimal?        @db.Decimal(12, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  brand           Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  design          Design?                 @relation(fields: [designId], references: [id], onDelete: SetNull)
+  lifecycleEvents ProductLifecycleEvent[]
+  videos          Video[]
+
+  @@unique([brandId, shopifyId])
+  @@index([brandId, status])
+}
+
+model ProductLifecycleEvent {
+  id        String          @id @default(cuid())
+  productId String
+  from      LifecycleStatus
+  to        LifecycleStatus
+  reason    String
+  createdAt DateTime        @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// ============================================================
+// SHOPIFY
+// ============================================================
+
+model ShopifyCollection {
+  id        String   @id @default(cuid())
+  brandId   String
+  shopifyId String
+  title     String
+  createdAt DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, shopifyId])
+}
+
+model ShopifyHealthCheck {
+  id        String   @id @default(cuid())
+  brandId   String
+  type      String // SEO | IMAGES | BROKEN_PAGE | PERFORMANCE
+  passed    Boolean
+  detail    Json
+  createdAt DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, type])
+}
+
+// ============================================================
+// META REKLAM
+// ============================================================
+
+model AdCampaign {
+  id          String   @id @default(cuid())
+  brandId     String
+  metaId      String
+  name        String
+  status      String
+  objective   String
+  dailyBudget Decimal? @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  adsets  AdSet[]
+
+  @@unique([brandId, metaId])
+}
+
+model AdSet {
+  id         String   @id @default(cuid())
+  campaignId String
+  metaId     String
+  name       String
+  status     String?
+  budget     Decimal? @db.Decimal(12, 2)
+  createdAt  DateTime @default(now())
+
+  campaign AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ads      Ad[]
+
+  @@index([campaignId])
+}
+
+model Ad {
+  id          String   @id @default(cuid())
+  adsetId     String
+  metaId      String
+  name        String
+  status      String?
+  creativeUrl String?
+  createdAt   DateTime @default(now())
+
+  adset AdSet @relation(fields: [adsetId], references: [id], onDelete: Cascade)
+
+  @@index([adsetId])
+}
+
+model AdMetric {
+  id          String   @id @default(cuid())
+  brandId     String
+  level       String // CAMPAIGN | ADSET | AD
+  refId       String // ilgili metaId
+  date        DateTime @db.Date
+  spend       Decimal  @db.Decimal(12, 2)
+  roas        Float?
+  cpa         Float?
+  cpc         Float?
+  ctr         Float?
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, level, refId, date])
+  @@index([brandId, date])
+}
+
+model CreativeTest {
+  id         String    @id @default(cuid())
+  brandId    String
+  hypothesis String
+  variants   Json
+  status     JobStatus @default(QUEUED)
+  winner     String?
+  createdAt  DateTime  @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, status])
+}
+
+// ============================================================
+// TEDARİKÇİ & MAIL
+// ============================================================
+
+model Supplier {
+  id        String   @id @default(cuid())
+  brandId   String
+  company   String
+  email     String?
+  phone     String?
+  website   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brand  Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  emails EmailMessage[]
+
+  @@index([brandId])
+}
+
+model EmailMessage {
+  id         String     @id @default(cuid())
+  brandId    String
+  supplierId String?
+  direction  MailDir
+  subject    String
+  body       String
+  status     MailStatus @default(DRAFT)
+  sentAt     DateTime?
+  createdAt  DateTime   @default(now())
+
+  brand    Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@index([brandId, status])
+}
+
+// ============================================================
+// FİNANS & RAPOR & SKOR
+// ============================================================
+
+model Order {
+  id              String   @id @default(cuid())
+  brandId         String
+  shopifyId       String
+  total           Decimal  @db.Decimal(12, 2)
+  currency        String   @default("TRY")
+  financialStatus String?
+  createdAt       DateTime // sipariş tarihi
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, shopifyId])
+  @@index([brandId, createdAt])
+}
+
+model FinanceSnapshot {
+  id          String   @id @default(cuid())
+  brandId     String
+  date        DateTime @db.Date
+  revenue     Decimal  @default(0) @db.Decimal(14, 2)
+  adSpend     Decimal  @default(0) @db.Decimal(14, 2)
+  cogs        Decimal  @default(0) @db.Decimal(14, 2)
+  shipping    Decimal  @default(0) @db.Decimal(14, 2)
+  commission  Decimal  @default(0) @db.Decimal(14, 2)
+  opex        Decimal  @default(0) @db.Decimal(14, 2)
+  grossProfit Decimal  @default(0) @db.Decimal(14, 2)
+  netProfit   Decimal  @default(0) @db.Decimal(14, 2)
+  taxEstimate Decimal  @default(0) @db.Decimal(14, 2)
+  orders      Int      @default(0)
+  aov         Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, date])
+}
+
+model OperationScore {
+  id           String   @id @default(cuid())
+  brandId      String
+  date         DateTime @db.Date
+  adScore      Float    @default(0)
+  seoScore     Float    @default(0)
+  profitScore  Float    @default(0)
+  qualityScore Float    @default(0)
+  trendScore   Float    @default(0)
+  overall      Float    @default(0)
+  createdAt    DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, date])
+}
+
+model AIReport {
+  id              String     @id @default(cuid())
+  brandId         String
+  type            ReportType
+  period          String
+  summary         String
+  insights        Json       @default("[]")
+  recommendations Json       @default("[]")
+  createdAt       DateTime   @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, type])
+}
+
+// ============================================================
+// GÖREV / İŞ / KORUMA / YEDEK / KULLANIM
+// ============================================================
+
+model Task {
+  id          String     @id @default(cuid())
+  brandId     String
+  title       String
+  description String?
+  type        TaskType   @default(GENERIC)
+  status      TaskStatus @default(OPEN)
+  priority    Int        @default(3)
+  dueAt       DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, status])
+}
+
+model Job {
+  id         String    @id @default(cuid())
+  brandId    String?
+  queue      String
+  name       String
+  status     JobStatus @default(QUEUED)
+  payload    Json
+  result     Json?
+  error      String?
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  brand Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  @@index([queue, status])
+}
+
+model SpendLimit {
+  id        String      @id @default(cuid())
+  brandId   String
+  period    LimitPeriod
+  amount    Decimal     @db.Decimal(12, 2)
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, period])
+}
+
+model Backup {
+  id        String     @id @default(cuid())
+  brandId   String?
+  type      BackupType
+  location  String
+  sizeBytes BigInt     @default(0)
+  createdAt DateTime   @default(now())
+
+  brand Brand? @relation(fields: [brandId], references: [id], onDelete: SetNull)
+}
+
+model UsageLog {
+  id        String   @id @default(cuid())
+  brandId   String
+  provider  Provider
+  model     String
+  tokensIn  Int?
+  tokensOut Int?
+  cost      Decimal  @default(0) @db.Decimal(12, 6)
+  createdAt DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, createdAt])
+}
+
+// ============================================================
+// ENUM'lar
+// ============================================================
+
+enum Role {
+  OWNER
+  ADMIN
+}
+
+enum Provider {
+  OPENAI
+  FAL
+  ANTHROPIC
+  SHOPIFY
+  META
+  SMTP
+  ETSY
+  PINTEREST
+}
+
+enum Source {
+  TIKTOK
+  PINTEREST
+  ETSY
+  AMAZON
+  REDDIT
+  HACKERNEWS
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum AssetStatus {
+  DRAFT
+  GENERATING
+  READY
+  FAILED
+  PUBLISHED
+}
+
+enum MockupType {
+  TSHIRT
+  HOODIE
+  SWEATSHIRT
+  OVERSIZE
+}
+
+enum VideoType {
+  TIKTOK
+  REEL
+  STORY
+  UGC
+}
+
+enum LifecycleStatus {
+  NEW
+  TEST
+  WINNER
+  SCALING
+  DECLINING
+  CLOSED
+}
+
+enum MailDir {
+  INBOUND
+  OUTBOUND
+}
+
+enum MailStatus {
+  DRAFT
+  SENT
+  FAILED
+}
+
+enum TaskType {
+  API_INPUT
+  APPROVE_DESIGN
+  APPROVE_AD
+  GENERIC
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum LimitPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum BackupType {
+  DATABASE
+  WORKFLOW
+  ASSETS
+}
+
+enum ReportType {
+  WEEKLY
+  CEO
+  FINANCE
+}

@@ -1,0 +1,72 @@
+{
+  "name": "VELORA — Weekly Master (Pazar 00:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 0 * * 0" }] }
+      },
+      "id": "cron-sunday",
+      "name": "Pazar 00:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://web:3000/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"weekly.trend\",\"queue\":\"trendHunt\"}",
+        "options": {}
+      },
+      "id": "step-trend",
+      "name": "1) Trend Analizi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://web:3000/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"weekly.finance\",\"queue\":\"financeSnapshot\"}",
+        "options": {}
+      },
+      "id": "step-finance",
+      "name": "2) Karlılık/Finans",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://web:3000/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"weekly.report\",\"queue\":\"weeklyReport\"}",
+        "options": {}
+      },
+      "id": "step-report",
+      "name": "3) Haftalık Rapor + Mail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Pazar 00:00": { "main": [[{ "node": "1) Trend Analizi", "type": "main", "index": 0 }]] },
+    "1) Trend Analizi": { "main": [[{ "node": "2) Karlılık/Finans", "type": "main", "index": 0 }]] },
+    "2) Karlılık/Finans": { "main": [[{ "node": "3) Haftalık Rapor + Mail", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,99 @@
+name: velora-prod
+
+# Üretim: altyapı + web + worker hepsi container'da.
+# Servisler container ağı üzerinden hostname ile konuşur (postgres/redis/minio/web).
+# Build: docker compose -f infra/docker-compose.prod.yml up -d --build
+# Gizli değerler kök `.env`'den; üretimde güçlü parola/secret kullanın.
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://velora:${POSTGRES_PASSWORD:-velora}@postgres:5432/velora?schema=public
+  REDIS_URL: redis://redis:6379
+  S3_ENDPOINT: http://minio:9000
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-velora}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-velorasecret}
+  S3_BUCKET: velora-assets
+  NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+  NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+  CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY}
+  N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
+  SMTP_HOST: ${SMTP_HOST:-mailhog}
+  SMTP_PORT: ${SMTP_PORT:-1025}
+  SMTP_FROM: ${SMTP_FROM:-velora@localhost}
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: velora
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-velora}
+      POSTGRES_DB: velora
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U velora -d velora"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis_data:/data"]
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-velora}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-velorasecret}
+    volumes: ["minio_data:/data"]
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on: [minio]
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-velora} ${S3_SECRET_KEY:-velorasecret}) do sleep 2; done;
+      /usr/bin/mc mb --ignore-existing local/velora-assets;
+      /usr/bin/mc anonymous set download local/velora-assets;
+      exit 0;"
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      N8N_SECURE_COOKIE: "false"
+      GENERIC_TIMEZONE: Europe/Istanbul
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET}
+    ports: ["5678:5678"]
+    volumes: ["n8n_data:/home/node/.n8n"]
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+    restart: unless-stopped
+    environment: *app-env
+    ports: ["3000:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/docker/worker.Dockerfile
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  n8n_data:
