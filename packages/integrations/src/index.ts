@@ -1,6 +1,14 @@
 export { shopifyGraphQL } from './shopify/client';
 export { verifyShopifyWebhook } from './shopify/webhooks';
-export { createProduct, fetchProductsForHealth, type CreateProductInput } from './shopify/products';
+export {
+  createProduct,
+  fetchProducts,
+  fetchProductsForHealth,
+  type CreateProductInput,
+  type ShopifyProductNode,
+} from './shopify/products';
+export { stageUploadImage } from './shopify/upload';
+export { updateShopPolicies, createLegalPage, type ShopPolicyInput } from './shopify/policies';
 export {
   listCampaigns,
   setCampaignStatus,

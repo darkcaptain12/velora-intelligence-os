@@ -21,6 +21,11 @@ const serverSchema = z.object({
   S3_SECRET_KEY: z.string().min(1),
   S3_BUCKET: z.string().default('velora-assets'),
   S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
+  // Genel erişilebilir asset taban adresi (tünel/CDN). Boşsa S3_ENDPOINT kullanılır.
+  S3_PUBLIC_ENDPOINT: z.string().default(''),
+  // Görsellerin panelde sunulduğu taban (uygulama origin'i). publicUrl bunu kullanır →
+  // panel görselleri uygulamanın kendi /api/asset rotasından gelir, tünele gerek kalmaz.
+  ASSET_PUBLIC_BASE: z.string().default('http://localhost:3000'),
 
   // Auth
   NEXTAUTH_SECRET: z.string().min(16, 'NEXTAUTH_SECRET en az 16 karakter olmalı'),

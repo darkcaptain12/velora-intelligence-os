@@ -50,6 +50,9 @@ importers:
       '@velora/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@velora/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3

@@ -8,6 +8,9 @@ export interface CreateProductInput {
   status?: 'ACTIVE' | 'DRAFT';
   seoTitle?: string;
   seoDescription?: string;
+  price?: number;
+  /** Herkese açık görsel URL'leri (tasarım + mockup'lar). Shopify media olarak eklenir. */
+  images?: string[];
 }
 
 interface ProductCreateResult {
@@ -17,18 +20,22 @@ interface ProductCreateResult {
   };
 }
 
-/** Shopify'da ürün oluşturur (Admin GraphQL `productCreate`). */
+/** Shopify'da ürün oluşturur — çoklu görsel (media) + opsiyonel fiyatlı varyant. */
 export async function createProduct(
   brandId: string,
   input: CreateProductInput,
 ): Promise<{ id: string; handle: string }> {
   const mutation = `
-    mutation productCreate($input: ProductInput!) {
-      productCreate(input: $input) {
+    mutation productCreate($input: ProductInput!, $media: [CreateMediaInput!]) {
+      productCreate(input: $input, media: $media) {
         product { id handle }
         userErrors { field message }
       }
     }`;
+  const media = (input.images ?? [])
+    .filter(Boolean)
+    .map((url) => ({ originalSource: url, mediaContentType: 'IMAGE' }));
+
   const variables = {
     input: {
       title: input.title,
@@ -37,6 +44,7 @@ export async function createProduct(
       status: input.status ?? 'DRAFT',
       seo: { title: input.seoTitle, description: input.seoDescription },
     },
+    media,
   };
   const data = await shopifyGraphQL<ProductCreateResult>(brandId, mutation, variables);
   const { product, userErrors } = data.productCreate;
@@ -46,7 +54,47 @@ export async function createProduct(
   if (!product) {
     throw new IntegrationError('SHOPIFY', 'Ürün oluşturuldu ancak yanıt boş');
   }
+
+  // Fiyat: varsayılan varyantı güncelle (varsa)
+  if (input.price != null) {
+    await setDefaultVariantPrice(brandId, product.id, input.price).catch(() => undefined);
+  }
   return product;
+}
+
+async function setDefaultVariantPrice(brandId: string, productId: string, price: number): Promise<void> {
+  const q = `query($id: ID!){ product(id:$id){ variants(first:1){ nodes { id } } } }`;
+  const d = await shopifyGraphQL<{ product: { variants: { nodes: { id: string }[] } } }>(brandId, q, { id: productId });
+  const variantId = d.product?.variants?.nodes?.[0]?.id;
+  if (!variantId) return;
+  const m = `mutation($pid: ID!, $variants: [ProductVariantsBulkInput!]!){
+    productVariantsBulkUpdate(productId:$pid, variants:$variants){ userErrors{ message } } }`;
+  await shopifyGraphQL(brandId, m, { pid: productId, variants: [{ id: variantId, price: price.toFixed(2) }] });
+}
+
+export interface ShopifyProductNode {
+  id: string;
+  title: string;
+  handle: string;
+  status: string;
+  featuredImage: { url: string } | null;
+  variants: { nodes: { price: string }[] };
+}
+
+/** Mağazadaki ürünleri çeker (sisteme senkron için). */
+export async function fetchProducts(brandId: string, first = 100): Promise<ShopifyProductNode[]> {
+  const query = `
+    query syncProducts($first: Int!) {
+      products(first: $first, sortKey: UPDATED_AT, reverse: true) {
+        nodes {
+          id title handle status
+          featuredImage { url }
+          variants(first: 1) { nodes { price } }
+        }
+      }
+    }`;
+  const data = await shopifyGraphQL<{ products: { nodes: ShopifyProductNode[] } }>(brandId, query, { first });
+  return data.products.nodes;
 }
 
 interface ProductsHealthResult {

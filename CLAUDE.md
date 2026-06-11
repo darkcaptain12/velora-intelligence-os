@@ -518,6 +518,48 @@ Bu dosya proje hafızası olarak kullanılacaktır.
 
 # PROJE DURUMU / İLERLEME
 
+## Sürüm: 1.1.0 — ÜRETİM SERTLEŞTİRME & TAM OTONOMİ (canlı doğrulandı)
+Tarih: 2026-06-11
+
+### Bu sprint — gerçek mağaza (Konfora, y0d5py-cb) ile canlıya geçiş
+- **Gerçekçi mockup:** sharp-SVG silüet bırakıldı. Fal ile üretilmiş gerçek boş giysi/model
+  şablonları (`apps/worker/src/assets/mockups/*.png`) üzerine `multiply` blend kompozit.
+  Varsayılan set: **MODEL_FRONT_W (kadın, kapak) + MODEL_FRONT (erkek) + TSHIRT (flat-lay) + MODEL_ANGLE_W**.
+  MockupType enum'a `MODEL_FRONT/ANGLE` + `MODEL_FRONT_W/ANGLE_W` eklendi (2 migration).
+- **Tasarım kalitesi:** `lib/design-prompt.ts` `buildDesignPrompt` — kısa niş → güçlü
+  "vektörel baskı grafiği, beyaz zemin, FOTOĞRAF/giysi/yazı YOK" promptu. Foto/tişört-şekli sorunu çözüldü.
+- **Net yazı (AI yazı zaafı çözümü):** `lib/text-overlay.ts` — AI yazıyı bırakmaz; tırnaklı slogan
+  (`extractOverlayText`, örn. `gym "BEAST MODE"`) sharp/SVG ile keskin basılır (Arial Black, beyaz dış hat).
+- **Baskıya hazır şeffaf PNG:** `lib/print-file.ts` (kenardan flood-fill ile arka plan şeffaf) →
+  `Design.transparentUrl`. "Baskı dosyasını indir" mockuplu değil, bare şeffaf grafiği indirir.
+- **Görsel mimarisi (tünel KALDIRILDI):** `storage.publicUrl` artık uygulama origin'i
+  (`ASSET_PUBLIC_BASE` → `/api/asset/<key>`); panel görselleri MinIO'dan **app rotasıyla** servis edilir
+  (`apps/web/app/api/asset/[...key]`). Shopify'a görseller **staged upload** (byte) ile gider
+  (`shopify/upload.ts stageUploadImage`). Vision base64 data URL alır. Tünel/HTTP bağımlılığı yok.
+- **Shopify çoklu görsel + çalınma koruması:** `createProduct` media (productCreate media arg);
+  yayında **SADECE mockup** yüklenir (ham/şeffaf tasarım ASLA), kapak = kadın model. Fiyatlı varyant.
+- **Shopify→sistem senkron + manuel ürün:** `products.upsertByShopify`, `integrations.fetchProducts`,
+  `/shopify` "Shopify'dan İçe Aktar" + "Manuel Ürün Ekle" + "Satışa Aç (ACTIVE)".
+- **Tam otonomi:** `processAutoDesign` (yaklaşan özel günler `lib/special-days.ts` + trendler → tasarım),
+  `processAutoPilot` (trend→tasarım→reklam→sağlık→finans), designScore'da **L3 talebe göre otomatik
+  yayın** (skor≥`autoPublish.minScore`=68 → DRAFT ürün). Queue: `autoDesign`,`autoPilot`. L3+autoMode AÇIK.
+- **n8n canlı:** compose env `N8N_WEBHOOK_SECRET` + `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`. 4 workflow
+  import+publish+aktif (Weekly Master, Daily Finance, Spend Guardian, **yeni Weekly Designs — Çar 03:00**).
+  Zincir doğrulandı (container→app webhook→worker, HTTP 200).
+- **Hukuki/içerik:** Shopify resmi policy slotları zaten Türkçe şablonlu; ek 6 özel sayfa
+  (Gizlilik, İade & Cayma, Kullanım Koşulları & Mesafeli Satış, Kargo, Hakkımızda, İletişim) —
+  `shopify/policies.ts createLegalPage`. `updateShopPolicies` `write_legal_policies` ister (token'da yok).
+- **Doğrulama (canlı):** typecheck (11 paket) ✓ · "cars minimal" → app-origin URL HTTP 200 ✓ ·
+  4 mockup (kadın/erkek/flatlay/açı) görsel ✓ · tünel KAPALI iken Shopify staged-upload yayını ✓ ·
+  autoDesign Babalar Günü'nü yakaladı ✓ · "BEAST MODE" net yazı ✓.
+
+### Teknik Notlar (1.1.0)
+- Tünel gereksiz; üretimde `ASSET_PUBLIC_BASE` gerçek alan adına ayarlanır. Shopify görselleri
+  staged-upload ile Shopify CDN'inde barınır (app erişilemese de kalıcı).
+- Mockup şablonları repo'da binary (`src/assets/mockups`); print rect'leri şablon oranına göre.
+- Resmi policy slotlarına API'den yazmak için custom app'e `write_legal_policies` scope gerekir (opsiyonel).
+
+### Önceki Durum (arşiv)
 ## Sürüm: 1.0.0 — FAZ 10 TAMAMLANDI · PROJE TAMAMLANDI 🎉
 Tarih: 2026-06-10
 

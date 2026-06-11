@@ -1,0 +1,36 @@
+{
+  "name": "VELORA — Weekly Designs (Çar 03:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 3 * * 3" }] }
+      },
+      "id": "cron-weekly-designs",
+      "name": "Her Çarşamba 03:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://web:3000/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"weekly.designs\",\"queue\":\"autoDesign\",\"data\":{\"count\":4}}",
+        "options": {}
+      },
+      "id": "auto-design",
+      "name": "Otomatik Tasarım Üret",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {
+    "Her Çarşamba 03:00": { "main": [[{ "node": "Otomatik Tasarım Üret", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -19,6 +19,7 @@
     "@velora/queue": "workspace:*",
     "@velora/scraping": "workspace:*",
     "@velora/shared": "workspace:*",
+    "@velora/storage": "workspace:*",
     "@radix-ui/react-slot": "^1.1.1",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",

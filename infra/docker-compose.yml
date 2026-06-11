@@ -79,6 +79,10 @@ services:
       N8N_SECURE_COOKIE: "false"
       GENERIC_TIMEZONE: Europe/Istanbul
       N8N_RUNNERS_ENABLED: "true"
+      # App webhook'unu doğrulamak için (workflow'larda {{$env.N8N_WEBHOOK_SECRET}})
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
+      # Workflow ifadelerinde $env erişimine izin ver (aksi halde "access to env vars denied")
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
     ports:
       - "5678:5678"
     volumes:

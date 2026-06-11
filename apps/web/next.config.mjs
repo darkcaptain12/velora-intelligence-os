@@ -18,6 +18,7 @@ const nextConfig = {
     '@velora/core',
     '@velora/ai',
     '@velora/integrations',
+    '@velora/storage',
   ],
   experimental: {
     serverComponentsExternalPackages: [
@@ -30,6 +31,7 @@ const nextConfig = {
       'playwright-core',
       'chromium-bidi',
       'openai',
+      'minio',
     ],
   },
   webpack: (config, { isServer }) => {

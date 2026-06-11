@@ -1,7 +1,8 @@
 import type { Job } from 'bullmq';
-import type { JobDataMap } from '@velora/queue';
-import { prisma, type Prisma } from '@velora/db';
+import { enqueue, type JobDataMap } from '@velora/queue';
+import { audit, prisma, products, settings, type Prisma } from '@velora/db';
 import { ai } from '@velora/ai';
+import { getObject, keyFromUrl } from '@velora/storage';
 import { logger } from '../logger';
 
 const SCORING_PROMPT = [
@@ -45,8 +46,15 @@ export async function processDesignScore(job: Job<JobDataMap['designScore']>) {
   const design = await prisma.design.findUnique({ where: { id: designId } });
   if (!design?.pngUrl) throw new Error(`Tasarım PNG yok: ${designId}`);
 
+  // Görseli base64 data URL olarak ver (OpenAI Vision dış URL'e erişmek zorunda kalmaz).
+  const key = keyFromUrl(design.pngUrl);
+  let imageUrl = design.pngUrl;
+  if (key) {
+    const { buffer, contentType } = await getObject(key);
+    imageUrl = `data:${contentType};base64,${buffer.toString('base64')}`;
+  }
   const text = await ai.vision.describe(design.brandId, {
-    imageUrl: design.pngUrl,
+    imageUrl,
     prompt: SCORING_PROMPT,
   });
   const scores = parseScores(text);
@@ -57,5 +65,28 @@ export async function processDesignScore(job: Job<JobDataMap['designScore']>) {
     data: { scores: scores as unknown as Prisma.InputJsonValue },
   });
   logger.info({ designId, scores }, 'tasarım skorlandı');
-  return scores;
+
+  // Talebe göre OTOMATİK YAYIN — yalnızca L3 (tam otonom) ve skor eşiği aşıldıysa.
+  const overall = Math.round(scores.sellability * 0.5 + scores.trend * 0.3 + scores.ad * 0.2);
+  const level = await settings.get<number>(design.brandId, 'autonomy.level', 1);
+  const minScore = await settings.get<number>(design.brandId, 'autoPublish.minScore', 68);
+  if (level >= 3 && overall >= minScore) {
+    const product = await products.create({
+      brandId: design.brandId,
+      title: design.prompt.slice(0, 70),
+      designId,
+    });
+    await enqueue('shopifyPublish', { productId: product.id });
+    await audit.log({
+      brandId: design.brandId,
+      actor: 'autopilot',
+      action: 'design.autopublish',
+      entity: 'Design',
+      entityId: designId,
+      payload: { overall, minScore },
+      autonomyLevel: 3,
+    });
+    logger.info({ designId, overall }, 'L3: talebe göre Shopify\'a otomatik yayınlandı');
+  }
+  return { ...scores, overall, autoPublished: level >= 3 && overall >= minScore };
 }

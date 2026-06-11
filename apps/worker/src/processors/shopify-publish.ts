@@ -2,7 +2,8 @@ import type { Job } from 'bullmq';
 import type { JobDataMap } from '@velora/queue';
 import { prisma, products } from '@velora/db';
 import { ai } from '@velora/ai';
-import { createProduct } from '@velora/integrations';
+import { createProduct, stageUploadImage } from '@velora/integrations';
+import { getObject, keyFromUrl } from '@velora/storage';
 import { logger } from '../logger';
 
 interface ProductPage {
@@ -65,7 +66,7 @@ export async function processShopifyPublish(job: Job<JobDataMap['shopifyPublish'
   const { productId } = job.data;
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    include: { design: true },
+    include: { design: { include: { mockups: true } } },
   });
   if (!product) throw new Error(`Ürün bulunamadı: ${productId}`);
 
@@ -77,6 +78,41 @@ export async function processShopifyPublish(job: Job<JobDataMap['shopifyPublish'
   const page = parsePage(raw);
   if (!page) throw new Error('Ürün sayfası JSON ayrıştırılamadı');
 
+  // Görseller: SADECE mockup'lar yüklenir (ham/şeffaf tasarım ASLA — çalınma riski).
+  // Kapak = kadın model önden; sonra erkek, flat-lay, açılı.
+  const COVER_ORDER: Record<string, number> = {
+    MODEL_FRONT_W: 0,
+    MODEL_FRONT: 1,
+    TSHIRT: 2,
+    MODEL_ANGLE_W: 3,
+    MODEL_ANGLE: 4,
+    SWEATSHIRT: 5,
+    HOODIE: 6,
+    OVERSIZE: 7,
+  };
+  const sortedMockups = [...(product.design?.mockups ?? [])].sort(
+    (a, b) => (COVER_ORDER[a.type] ?? 9) - (COVER_ORDER[b.type] ?? 9),
+  );
+
+  // Mockup byte'larını MinIO'dan oku → Shopify'a staged upload → resourceUrl (tünel gerektirmez).
+  const images: string[] = [];
+  for (const m of sortedMockups) {
+    const key = keyFromUrl(m.url);
+    if (!key) continue;
+    try {
+      const { buffer, contentType } = await getObject(key);
+      const resourceUrl = await stageUploadImage(
+        product.brandId,
+        buffer,
+        `${m.type}.png`,
+        contentType,
+      );
+      images.push(resourceUrl);
+    } catch (e) {
+      logger.warn({ productId, type: m.type, err: (e as Error).message }, 'mockup yüklenemedi');
+    }
+  }
+
   const created = await createProduct(product.brandId, {
     title: product.title,
     descriptionHtml: buildHtml(page),
@@ -84,6 +120,8 @@ export async function processShopifyPublish(job: Job<JobDataMap['shopifyPublish'
     status: 'DRAFT',
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
+    price: product.price != null ? Number(product.price) : undefined,
+    images,
   });
 
   await products.setShopify(product.id, created.id, page.salesCopy);

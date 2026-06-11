@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { audit, products, type LifecycleStatus } from '@velora/db';
+import { audit, prisma, products, type LifecycleStatus } from '@velora/db';
 import { enqueue } from '@velora/queue';
+import { fetchProducts, shopifyGraphQL } from '@velora/integrations';
+import { IntegrationError } from '@velora/shared';
 import { actionContext } from '@/lib/action-context';
 
 /** Tasarımdan ürün oluştur + Shopify'a yayınla (otomatik ürün sayfası işi). */
@@ -56,6 +58,71 @@ export async function transitionProduct(formData: FormData) {
     payload: { to },
     autonomyLevel: 2,
   });
+  revalidatePath('/shopify');
+}
+
+/** Mağazadaki ürünleri sisteme içe aktarır (Shopify → sistem senkron). */
+export async function importFromShopify() {
+  const { actor, brandId } = await actionContext();
+  try {
+    const nodes = await fetchProducts(brandId, 100);
+    let count = 0;
+    for (const n of nodes) {
+      const price = n.variants?.nodes?.[0]?.price ? Number(n.variants.nodes[0].price) : undefined;
+      await products.upsertByShopify(brandId, n.id, { title: n.title, price });
+      count += 1;
+    }
+    await audit.log({
+      brandId,
+      actor,
+      action: 'shopify.import',
+      entity: 'Product',
+      payload: { count },
+      autonomyLevel: 2,
+    });
+  } catch (err) {
+    if (!(err instanceof IntegrationError)) throw err;
+    await audit.log({ brandId, actor, action: 'shopify.import.failed', entity: 'Brand', payload: { error: err.message }, autonomyLevel: 2 });
+  }
+  revalidatePath('/shopify');
+}
+
+/** Manuel ürün ekleme (sisteme; Shopify'a göndermez). */
+export async function addManualProduct(formData: FormData) {
+  const { actor, brandId } = await actionContext();
+  const data = z
+    .object({
+      title: z.string().min(2).max(200),
+      price: z.coerce.number().min(0).optional(),
+      cost: z.coerce.number().min(0).optional(),
+    })
+    .parse({
+      title: formData.get('title'),
+      price: formData.get('price') || undefined,
+      cost: formData.get('cost') || undefined,
+    });
+  const product = await products.create({ brandId, title: data.title, price: data.price, cost: data.cost });
+  await audit.log({ brandId, actor, action: 'product.manual', entity: 'Product', entityId: product.id, payload: data, autonomyLevel: 2 });
+  revalidatePath('/shopify');
+}
+
+/** Shopify'da ürünü ACTIVE yapar (satışa aç). */
+export async function publishToActive(formData: FormData) {
+  const { actor, brandId } = await actionContext();
+  const id = String(formData.get('id') ?? '');
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product?.shopifyId) return;
+  try {
+    await shopifyGraphQL(
+      brandId,
+      'mutation($input: ProductInput!){ productUpdate(input:$input){ product{ id status } userErrors{ message } } }',
+      { input: { id: product.shopifyId, status: 'ACTIVE' } },
+    );
+    await products.transition(id, 'WINNER', 'Satışa açıldı (ACTIVE)').catch(() => undefined);
+    await audit.log({ brandId, actor, action: 'shopify.activate', entity: 'Product', entityId: id, autonomyLevel: 2 });
+  } catch (err) {
+    if (!(err instanceof IntegrationError)) throw err;
+  }
   revalidatePath('/shopify');
 }
 

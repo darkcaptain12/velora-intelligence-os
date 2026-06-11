@@ -6,7 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { publishDesign, runHealthCheck, transitionProduct } from './actions';
+import {
+  addManualProduct,
+  importFromShopify,
+  publishDesign,
+  publishToActive,
+  runHealthCheck,
+  transitionProduct,
+} from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,12 +44,42 @@ export default async function ShopifyPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Shopify Yönetim Merkezi</h1>
-        <p className="text-muted-foreground">
-          Tasarımdan otomatik ürün sayfasıyla Shopify'a yayınla, yaşam döngüsünü yönet, sağlık kontrolü çalıştır.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Shopify Yönetim Merkezi</h1>
+          <p className="text-muted-foreground">
+            Tasarımdan otomatik ürün sayfasıyla yayınla, mağazadan içe aktar, yaşam döngüsünü yönet.
+          </p>
+        </div>
+        <form action={importFromShopify}>
+          <Button type="submit" variant="outline" size="sm">Shopify'dan İçe Aktar</Button>
+        </form>
       </div>
+
+      {/* Manuel ürün ekleme */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Manuel Ürün Ekle</CardTitle>
+          <CardDescription>Kendi ürününü sisteme ekle (Shopify'a göndermeden).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={addManualProduct} className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 space-y-1" style={{ minWidth: 200 }}>
+              <Label htmlFor="m-title">Başlık</Label>
+              <Input id="m-title" name="title" required />
+            </div>
+            <div className="w-28 space-y-1">
+              <Label htmlFor="m-price">Fiyat</Label>
+              <Input id="m-price" name="price" type="number" min="0" step="0.01" />
+            </div>
+            <div className="w-28 space-y-1">
+              <Label htmlFor="m-cost">Maliyet</Label>
+              <Input id="m-cost" name="cost" type="number" min="0" step="0.01" />
+            </div>
+            <Button type="submit" variant="outline">Ekle</Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Yayınlanabilir tasarımlar */}
       <Card>
@@ -106,6 +143,12 @@ export default async function ShopifyPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {p.shopifyId && (
+                      <form action={publishToActive}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <Button type="submit" size="sm">Satışa Aç</Button>
+                      </form>
+                    )}
                     {nextStates(p.status).map((to) => (
                       <form key={to} action={transitionProduct}>
                         <input type="hidden" name="id" value={p.id} />

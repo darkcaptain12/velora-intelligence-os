@@ -19,6 +19,8 @@ import { processTrendHunt } from './processors/trend-hunt';
 import { processCompetitorScan } from './processors/competitor-scan';
 import { processWeeklyReport } from './processors/weekly-report';
 import { processBackup } from './processors/backup';
+import { processAutoDesign } from './processors/auto-design';
+import { processAutoPilot } from './processors/auto-pilot';
 
 const env = serverEnv();
 const connection = getConnection();
@@ -136,6 +138,20 @@ workers.push(
 
 workers.push(
   new Worker(QUEUE_NAMES.backup, async (job) => processBackup(job), {
+    connection,
+    concurrency: 1,
+  }),
+);
+
+workers.push(
+  new Worker(QUEUE_NAMES.autoDesign, async (job) => processAutoDesign(job), {
+    connection,
+    concurrency: 1,
+  }),
+);
+
+workers.push(
+  new Worker(QUEUE_NAMES.autoPilot, async (job) => processAutoPilot(job), {
     connection,
     concurrency: 1,
   }),

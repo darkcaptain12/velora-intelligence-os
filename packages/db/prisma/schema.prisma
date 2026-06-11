@@ -659,6 +659,10 @@ enum MockupType {
   HOODIE
   SWEATSHIRT
   OVERSIZE
+  MODEL_FRONT
+  MODEL_ANGLE
+  MODEL_FRONT_W
+  MODEL_ANGLE_W
 }
 
 enum VideoType {

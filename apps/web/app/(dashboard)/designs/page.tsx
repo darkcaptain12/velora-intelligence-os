@@ -157,15 +157,27 @@ export default async function DesignsPage() {
                     {d.mockups.length > 0 && (
                       <div className="flex gap-1">
                         {d.mockups.slice(0, 4).map((m) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            key={m.id}
-                            src={m.url}
-                            alt={m.type}
-                            className="h-12 w-12 rounded border object-cover"
-                          />
+                          <a key={m.id} href={m.url} download target="_blank" rel="noreferrer" title={`${m.type} indir`}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={m.url}
+                              alt={m.type}
+                              className="h-12 w-12 rounded border object-cover transition-opacity hover:opacity-80"
+                            />
+                          </a>
                         ))}
                       </div>
+                    )}
+                    {(d.transparentUrl || d.pngUrl) && (
+                      <a
+                        href={d.transparentUrl ?? d.pngUrl ?? '#'}
+                        download={`${d.id}-baski.png`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block text-center text-xs font-medium text-primary underline"
+                      >
+                        ⬇ Baskı dosyasını indir (şeffaf PNG)
+                      </a>
                     )}
                     {d.status === 'READY' && (
                       <form action={approveDesign}>

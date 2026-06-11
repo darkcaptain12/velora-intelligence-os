@@ -43,4 +43,16 @@ export const products = {
       where: { id },
       data: { shopifyId, ...(description ? { description } : {}) },
     }),
+
+  /** Shopify'dan içe aktarımda ürünü shopifyId ile eşitler (varsa günceller). */
+  upsertByShopify: (
+    brandId: string,
+    shopifyId: string,
+    data: { title: string; price?: number },
+  ) =>
+    prisma.product.upsert({
+      where: { brandId_shopifyId: { brandId, shopifyId } },
+      create: { brandId, shopifyId, title: data.title, price: data.price, status: 'TEST' },
+      update: { title: data.title, ...(data.price != null ? { price: data.price } : {}) },
+    }),
 };

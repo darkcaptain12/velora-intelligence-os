@@ -22,6 +22,8 @@ export const QUEUE_NAMES = {
   competitorScan: 'competitorScan',
   weeklyReport: 'weeklyReport',
   backup: 'backup',
+  autoDesign: 'autoDesign',
+  autoPilot: 'autoPilot',
 } as const;
 
 export type QueueName = keyof typeof QUEUE_NAMES;
@@ -44,6 +46,10 @@ export interface JobDataMap {
   competitorScan: { competitorId: string };
   weeklyReport: { brandId: string };
   backup: { brandId?: string };
+  /** Trend + özel gün temalarından otomatik tasarım üretimi (haftalık). */
+  autoDesign: { brandId: string; count?: number };
+  /** Tam otonom orkestratör: araştır→trend→tasarım→(talebe göre)yayın→reklam→rapor. */
+  autoPilot: { brandId: string };
 }
 
 const _queues = new Map<string, Queue>();

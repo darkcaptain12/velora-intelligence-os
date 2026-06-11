@@ -30,10 +30,33 @@ export async function putObject(key: string, body: Buffer, contentType: string):
   return publicUrl(key);
 }
 
-/** Anahtar için herkese açık URL üretir. */
+/**
+ * Görsel URL'si — uygulamanın kendi `/api/asset` rotası üzerinden (kararlı, tünel gerektirmez).
+ * Panel localhost:3000'den görüntülendiği için görseller her zaman erişilebilir; tünel URL'si
+ * değişse/düşse bile panel kırılmaz. Shopify'a yükleme byte ile (staged upload) yapılır.
+ */
 export function publicUrl(key: string): string {
+  const base = serverEnv().ASSET_PUBLIC_BASE.replace(/\/$/, '');
+  return `${base}/api/asset/${key}`;
+}
+
+/** `/api/asset/<key>` URL'sinden nesne anahtarını çıkarır. */
+export function keyFromUrl(url: string): string | null {
+  const m = url.match(/\/api\/asset\/(.+)$/);
+  return m?.[1] ? decodeURIComponent(m[1]) : null;
+}
+
+/** Nesneyi MinIO'dan okur (web /api/asset rotası + Shopify staged upload için). */
+export async function getObject(key: string): Promise<{ buffer: Buffer; contentType: string }> {
   const env = serverEnv();
-  return `${env.S3_ENDPOINT.replace(/\/$/, '')}/${env.S3_BUCKET}/${key}`;
+  const stat = await getClient().statObject(env.S3_BUCKET, key).catch(() => null);
+  const stream = await getClient().getObject(env.S3_BUCKET, key);
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Uint8Array);
+  return {
+    buffer: Buffer.concat(chunks as unknown as readonly Uint8Array[]),
+    contentType: stat?.metaData?.['content-type'] ?? 'application/octet-stream',
+  };
 }
 
 /** İmzalı (geçici) okuma URL'si. */

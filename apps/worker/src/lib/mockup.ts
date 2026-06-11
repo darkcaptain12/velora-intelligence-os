@@ -1,61 +1,63 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import type { MockupType } from '@velora/db';
 
 /**
- * Mockup kompozisyon motoru (sharp, yerel — AI gerektirmez).
- * Tasarım PNG'sini giysi şablonu üzerine baskı alanına yerleştirir.
+ * Mockup kompozisyon motoru (gerçekçi) — gerçek boş giysi/model fotoğrafı şablonu
+ * üzerine tasarımı `multiply` blend ile basar: beyaz zemin görünmez, baskı kumaş
+ * gölgesini/kıvrımını takip eder. Şablonlar `src/assets/mockups/*.png` (Fal üretimi).
  *
- * NOT: Giysi silüeti SVG ile üretilir (kod tamdır). Üretimde gerçek giysi fotoğrafı
- * şablonları `template` buffer'ı olarak verilerek değiştirilebilir.
+ * Varsayılan set bir tişört ürünü için 3 sunum verir (CLAUDE.md "gerçek ürün görseli"):
+ *   MODEL_FRONT (kapak — modelin üstünde önden), TSHIRT (düz/flat-lay), MODEL_ANGLE (açılı).
  */
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TPL_DIR = path.join(__dirname, '../assets/mockups');
+
 interface GarmentConfig {
-  width: number;
-  height: number;
-  color: string;
-  label: string;
-  print: { x: number; y: number; w: number; h: number };
+  file: string;
+  /** Baskı alanı, şablon boyutuna oran (merkez x/y, genişlik/yükseklik). */
+  print: { cx: number; cy: number; w: number; h: number };
 }
 
 const GARMENTS: Record<MockupType, GarmentConfig> = {
-  TSHIRT: { width: 1000, height: 1200, color: '#1f2937', label: 'T-Shirt', print: { x: 320, y: 360, w: 360, h: 420 } },
-  HOODIE: { width: 1000, height: 1200, color: '#374151', label: 'Hoodie', print: { x: 330, y: 420, w: 340, h: 360 } },
-  SWEATSHIRT: { width: 1000, height: 1200, color: '#4b5563', label: 'Sweatshirt', print: { x: 320, y: 400, w: 360, h: 380 } },
-  OVERSIZE: { width: 1000, height: 1200, color: '#111827', label: 'Oversize', print: { x: 300, y: 380, w: 400, h: 420 } },
+  // Model üstü (giydirilmiş) — kadın + erkek, göğüs baskı alanı (belirgin/tutarlı boyut)
+  MODEL_FRONT_W: { file: 'model-front-w.png', print: { cx: 0.5, cy: 0.5, w: 0.27, h: 0.29 } },
+  MODEL_ANGLE_W: { file: 'model-angle-w.png', print: { cx: 0.5, cy: 0.49, w: 0.25, h: 0.27 } },
+  MODEL_FRONT: { file: 'model-front.png', print: { cx: 0.5, cy: 0.46, w: 0.3, h: 0.32 } },
+  MODEL_ANGLE: { file: 'model-angle.png', print: { cx: 0.5, cy: 0.46, w: 0.27, h: 0.29 } },
+  // Düz (flat-lay) giysiler
+  TSHIRT: { file: 'tshirt.png', print: { cx: 0.5, cy: 0.45, w: 0.33, h: 0.35 } },
+  HOODIE: { file: 'hoodie.png', print: { cx: 0.5, cy: 0.5, w: 0.24, h: 0.26 } },
+  SWEATSHIRT: { file: 'sweatshirt.png', print: { cx: 0.5, cy: 0.46, w: 0.28, h: 0.3 } },
+  OVERSIZE: { file: 'oversize.png', print: { cx: 0.5, cy: 0.44, w: 0.32, h: 0.34 } },
 };
 
-function garmentSvg(g: GarmentConfig): Buffer {
-  const { width: w, height: h, color, label } = g;
-  const cx = w / 2;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
-    <rect width="${w}" height="${h}" fill="#eceff1"/>
-    <!-- sol kol -->
-    <polygon points="${cx - 220},170 ${cx - 360},320 ${cx - 280},420 ${cx - 200},300" fill="${color}"/>
-    <!-- sağ kol -->
-    <polygon points="${cx + 220},170 ${cx + 360},320 ${cx + 280},420 ${cx + 200},300" fill="${color}"/>
-    <!-- gövde -->
-    <rect x="${cx - 220}" y="200" width="440" height="820" rx="60" fill="${color}"/>
-    <!-- yaka -->
-    <ellipse cx="${cx}" cy="200" rx="90" ry="50" fill="#eceff1"/>
-    <text x="${cx}" y="${h - 50}" font-size="44" font-family="Helvetica, Arial, sans-serif" fill="#607d8b" text-anchor="middle">${label}</text>
-  </svg>`;
-  return Buffer.from(svg);
-}
+/** Varsayılan tişört sunum seti — kadın + erkek modeller + flat-lay (ilk eleman = kapak). */
+export const MOCKUP_TYPES: MockupType[] = ['MODEL_FRONT_W', 'MODEL_FRONT', 'TSHIRT', 'MODEL_ANGLE_W'];
 
-/** Tasarımı verilen giysi türüne yerleştirip mockup PNG buffer'ı döner. */
+/** Tasarımı giysi/model şablonuna gerçekçi şekilde basar, mockup PNG döner. */
 export async function renderMockup(designPng: Buffer, type: MockupType): Promise<Buffer> {
   const g = GARMENTS[type];
-  const base = sharp(garmentSvg(g)).png();
+  const base = sharp(path.join(TPL_DIR, g.file)).removeAlpha();
+  const meta = await base.metadata();
+  const W = meta.width ?? 1024;
+  const H = meta.height ?? 1024;
 
+  const pw = Math.round(W * g.print.w);
+  const ph = Math.round(H * g.print.h);
   const design = await sharp(designPng)
-    .resize(g.print.w, g.print.h, { fit: 'inside', withoutEnlargement: false })
+    .resize(pw, ph, { fit: 'inside', withoutEnlargement: false })
+    .flatten({ background: '#ffffff' })
     .png()
     .toBuffer();
-  const meta = await sharp(design).metadata();
+  const dm = await sharp(design).metadata();
 
-  const left = g.print.x + Math.round((g.print.w - (meta.width ?? g.print.w)) / 2);
-  const top = g.print.y + Math.round((g.print.h - (meta.height ?? g.print.h)) / 2);
+  const left = Math.round(W * g.print.cx - (dm.width ?? pw) / 2);
+  const top = Math.round(H * g.print.cy - (dm.height ?? ph) / 2);
 
-  return base.composite([{ input: design, left, top }]).png().toBuffer();
+  return base
+    .composite([{ input: design, left, top, blend: 'multiply' }])
+    .png()
+    .toBuffer();
 }
-
-export const MOCKUP_TYPES: MockupType[] = ['TSHIRT', 'HOODIE', 'SWEATSHIRT', 'OVERSIZE'];
