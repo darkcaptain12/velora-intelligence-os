@@ -10,6 +10,7 @@ import {
   saveAutonomy,
   saveCredential,
   savePrintifyMarkup,
+  savePrintifyMode,
   saveSpendLimits,
   updateBrand,
 } from './actions';
@@ -30,7 +31,7 @@ const PROVIDER_LABELS: { key: Provider; label: string; hint: string }[] = [
 
 export default async function SettingsPage() {
   const brand = await getActiveBrand();
-  const [credStatus, limits, level, autoMode, pfShop, pfMarkup, pfVariants] = await Promise.all([
+  const [credStatus, limits, level, autoMode, pfShop, pfMarkup, pfVariants, pfPassive] = await Promise.all([
     credentials.listStatus(brand.id),
     spendLimits.list(brand.id),
     settings.get<number>(brand.id, 'autonomy.level', 1),
@@ -38,6 +39,7 @@ export default async function SettingsPage() {
     settings.get<number>(brand.id, 'printify.shopId', 0),
     settings.get<number>(brand.id, 'printify.markup', 2.2),
     settings.get<number[]>(brand.id, 'printify.variantIds', []),
+    settings.get<boolean>(brand.id, 'printify.passive', true),
   ]);
 
   const amount = (period: string) =>
@@ -138,6 +140,9 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
+            <Badge variant={pfPassive ? 'secondary' : 'success'}>
+              {pfPassive ? 'PASİF (direct-Shopify + kendi mockup)' : 'AKTİF (Printify POD)'}
+            </Badge>
             {pfShop ? (
               <Badge variant="success">Bağlı · shop #{pfShop} · {pfVariants.length} varyant</Badge>
             ) : (
@@ -147,6 +152,14 @@ export default async function SettingsPage() {
               <Button type="submit" variant="outline" size="sm">Bağlantıyı Getir</Button>
             </form>
           </div>
+          <form action={savePrintifyMode} className="flex items-center gap-2">
+            <input type="hidden" name="_" value="1" />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="passive" defaultChecked={pfPassive} className="h-4 w-4 rounded border-input" />
+              Pasif mod (Printify'ı varsayılan üründen çıkar — kod korunur, sonra geri açılır)
+            </label>
+            <Button type="submit" variant="outline" size="sm">Modu Kaydet</Button>
+          </form>
           <form action={savePrintifyMarkup} className="flex flex-wrap items-end gap-3">
             <div className="w-40 space-y-1">
               <Label htmlFor="markup">Kâr çarpanı (markup)</Label>

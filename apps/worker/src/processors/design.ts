@@ -51,7 +51,8 @@ export async function processDesign(job: Job<JobDataMap['design']>) {
     });
     logger.info({ designId, pngUrl, transparentUrl }, 'tasarım üretildi');
 
-    // Mockup'lar artık Printify'dan gelir (ürün oluşturulurken); sharp mockup emekli.
+    // Kendi gerçekçi mockup'larımız (Printify pasif default). Printify aktifse de zararsız.
+    await enqueue('mockup', { designId });
     await enqueue('designScore', { designId });
     return { pngUrl };
   } catch (err) {

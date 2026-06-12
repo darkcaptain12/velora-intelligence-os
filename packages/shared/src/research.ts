@@ -6,7 +6,12 @@ export type ResearchSource =
   | 'ETSY'
   | 'AMAZON'
   | 'REDDIT'
-  | 'HACKERNEWS';
+  | 'HACKERNEWS'
+  | 'TRENDYOL'
+  | 'HEPSIBURADA'
+  | 'SIKAYETVAR'
+  | 'INSTAGRAM'
+  | 'GOOGLE_TRENDS';
 
 /** Bir kaynaktan normalize edilmiş ham araştırma öğesi. */
 export interface ResearchItem {

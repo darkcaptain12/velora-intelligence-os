@@ -16,8 +16,10 @@ import {
   ScrollText,
   Search,
   Settings,
+  ShieldCheck,
   ShoppingBag,
   Swords,
+  Target,
   TrendingUp,
   Video,
 } from 'lucide-react';
@@ -26,6 +28,8 @@ import { cn } from '@/lib/utils';
 const items = [
   { href: '/dashboard', label: 'Komuta Merkezi', icon: LayoutDashboard },
   { href: '/ceo', label: 'AI CEO', icon: Brain },
+  { href: '/discovery', label: 'Ürün Keşif', icon: Target },
+  { href: '/validation', label: 'Satış Doğrulama', icon: ShieldCheck },
   { href: '/research', label: 'Ürün Araştırma', icon: Search },
   { href: '/trends', label: 'Trend Avcısı', icon: TrendingUp },
   { href: '/designs', label: 'Tasarım & Mockup', icon: Palette },

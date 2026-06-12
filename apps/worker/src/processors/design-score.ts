@@ -76,7 +76,9 @@ export async function processDesignScore(job: Job<JobDataMap['designScore']>) {
       title: design.prompt.slice(0, 70),
       designId,
     });
-    await enqueue('printifyPublish', { productId: product.id });
+    // Printify pasif (default) → direct Shopify (kendi mockup'larımız); aktifse Printify.
+    const passive = await settings.get<boolean>(design.brandId, 'printify.passive', true);
+    await enqueue(passive ? 'shopifyPublish' : 'printifyPublish', { productId: product.id });
     await audit.log({
       brandId: design.brandId,
       actor: 'autopilot',

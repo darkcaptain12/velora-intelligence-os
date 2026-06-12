@@ -1,4 +1,4 @@
-import { prisma, products as productSvc, type LifecycleStatus } from '@velora/db';
+import { prisma, products as productSvc, settings, type LifecycleStatus } from '@velora/db';
 import { LIFECYCLE_LABELS, nextStates } from '@velora/core';
 import { getActiveBrand } from '@/lib/brand';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +42,7 @@ export default async function ShopifyPage() {
       take: 4,
     }),
   ]);
+  const printifyPassive = await settings.get<boolean>(brand.id, 'printify.passive', true);
 
   return (
     <div className="space-y-8">
@@ -113,7 +114,7 @@ export default async function ShopifyPage() {
                   <Label htmlFor={`price-${d.id}`}>Fiyat (oto)</Label>
                   <Input id={`price-${d.id}`} name="price" type="number" min="0" step="0.01" placeholder="oto" />
                 </div>
-                <Button type="submit">Printify'da Hazırla</Button>
+                <Button type="submit">{printifyPassive ? "Shopify'da Yayınla" : "Printify'da Hazırla"}</Button>
               </form>
             ))
           )}
@@ -155,7 +156,7 @@ export default async function ShopifyPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {p.printifyProductId && !p.shopifyId && (
+                    {!printifyPassive && p.printifyProductId && !p.shopifyId && (
                       <form action={publishProductToShopify}>
                         <input type="hidden" name="id" value={p.id} />
                         <Button type="submit" size="sm">Shopify'a Yayınla</Button>

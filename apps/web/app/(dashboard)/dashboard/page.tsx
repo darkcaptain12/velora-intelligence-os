@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { audit, settings, tasks } from '@velora/db';
+import { audit, opportunities, settings, tasks } from '@velora/db';
 import { getActiveBrand } from '@/lib/brand';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,11 +14,12 @@ const AUTONOMY_LABEL: Record<number, string> = {
 
 export default async function DashboardPage() {
   const brand = await getActiveBrand();
-  const [taskCounts, level, recentTasks, recentAudit] = await Promise.all([
+  const [taskCounts, level, recentTasks, recentAudit, topOpps] = await Promise.all([
     tasks.counts(brand.id),
     settings.get<number>(brand.id, 'autonomy.level', 1),
     tasks.list(brand.id, 'OPEN'),
     audit.recent(brand.id, 6),
+    opportunities.top(brand.id, 5),
   ]);
 
   return (
@@ -54,6 +55,39 @@ export default async function DashboardPage() {
           </CardHeader>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">🎯 Bu Haftanın En İyi Fırsatları</CardTitle>
+          <CardDescription>
+            Priority Score'a göre sıralı ·{' '}
+            <Link href="/discovery" className="underline">
+              Ürün Keşif Merkezi'ne git
+            </Link>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {topOpps.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Henüz fırsat yok. Ürün Keşif Merkezi'nde "Keşfet"e basın.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {topOpps.map((o) => (
+                <li key={o.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="flex items-center gap-2">
+                    <Badge variant="secondary">{o.kind}</Badge>
+                    {o.title}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    P{o.priorityScore ?? '–'} · doğrulama {o.validationScore ?? '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

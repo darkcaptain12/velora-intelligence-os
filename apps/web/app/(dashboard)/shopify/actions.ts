@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { audit, prisma, products, type LifecycleStatus } from '@velora/db';
+import { audit, prisma, products, settings, type LifecycleStatus } from '@velora/db';
 import { enqueue } from '@velora/queue';
 import { fetchProducts, publishPrintifyProduct, shopifyGraphQL } from '@velora/integrations';
 import { IntegrationError } from '@velora/shared';
@@ -29,12 +29,13 @@ export async function publishDesign(formData: FormData) {
     designId: data.designId,
     price: data.price,
   });
-  // Printify ürünü + mockup hazırla (Shopify'a yayın ayrı adım — kullanıcı onayı).
-  await enqueue('printifyPublish', { productId: product.id });
+  // Printify pasif (default) → direct Shopify (kendi mockup'larımız); aktifse Printify ürünü.
+  const passive = await settings.get<boolean>(brandId, 'printify.passive', true);
+  await enqueue(passive ? 'shopifyPublish' : 'printifyPublish', { productId: product.id });
   await audit.log({
     brandId,
     actor,
-    action: 'printify.prepare',
+    action: passive ? 'shopify.publish' : 'printify.prepare',
     entity: 'Product',
     entityId: product.id,
     payload: data,

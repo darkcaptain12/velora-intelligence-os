@@ -123,6 +123,15 @@ export async function connectPrintify() {
   revalidatePath('/settings');
 }
 
+/** Printify pasif/aktif modu. Pasif (default) → ürünler direct-Shopify + kendi mockup'larımız. */
+export async function savePrintifyMode(formData: FormData) {
+  const { actor, brandId } = await actionContext();
+  const passive = formData.get('passive') === 'on';
+  await settings.set(brandId, 'printify.passive', passive);
+  await audit.log({ brandId, actor, action: 'printify.mode', entity: 'Setting', payload: { passive }, autonomyLevel: 2 });
+  revalidatePath('/settings');
+}
+
 /** Printify kâr marjı (markup) çarpanını kaydeder. */
 export async function savePrintifyMarkup(formData: FormData) {
   const { actor, brandId } = await actionContext();

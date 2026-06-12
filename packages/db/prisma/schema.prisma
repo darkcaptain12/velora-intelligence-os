@@ -41,6 +41,7 @@ model Brand {
   auditLogs        AuditLog[]
   researchRuns     ResearchRun[]
   trends           Trend[]
+  opportunities    Opportunity[]
   competitors      Competitor[]
   designBriefs     DesignBrief[]
   designs          Design[]
@@ -155,6 +156,33 @@ model Trend {
   brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@index([brandId, week])
+}
+
+/// Ürün Avcısı'nın ürettiği satış fırsatı (Opportunity-First mimarisinin merkezi).
+model Opportunity {
+  id               String            @id @default(cuid())
+  brandId          String
+  title            String
+  niche            String
+  kind             OpportunityKind   @default(TREND)
+  sourceSignals    Json? // ham sinyaller (kaynak başlıkları, sayılar, vb.)
+  opportunityScore Json? // { talep, rekabet, karlilik, uretilebilirlik, trend, pazarBuyuklugu, total }
+  validationScore  Int? // 0-100 (Validation Center)
+  validationSignals Json?
+  seasonalityScore Int? // 0-100 (Timing/Seasonality)
+  priorityScore    Int? // 0-100 ana sıralama
+  aiRationale      String?
+  status           OpportunityStatus @default(NEW)
+  eventDate        DateTime? // kind=EVENT için
+  week             String // ISO hafta
+  designId         String? // "Tasarıma Dönüştür" sonrası bağlanan tasarım
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, status])
+  @@index([brandId, priorityScore])
 }
 
 model Competitor {
@@ -641,6 +669,25 @@ enum Source {
   AMAZON
   REDDIT
   HACKERNEWS
+  TRENDYOL
+  HEPSIBURADA
+  SIKAYETVAR
+  INSTAGRAM
+  GOOGLE_TRENDS
+}
+
+enum OpportunityKind {
+  TREND
+  PROBLEM
+  EVENT
+}
+
+enum OpportunityStatus {
+  NEW
+  SCORED
+  VALIDATED
+  REJECTED
+  PURSUED
 }
 
 enum JobStatus {

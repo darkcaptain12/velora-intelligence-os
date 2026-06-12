@@ -6,11 +6,15 @@ import { etsyAdapter } from './adapters/etsy';
 import { pinterestAdapter } from './adapters/pinterest';
 import { tiktokAdapter } from './adapters/tiktok';
 import { amazonAdapter } from './adapters/amazon';
+import { googleTrendsAdapter } from './adapters/google-trends';
+import { sikayetvarAdapter } from './adapters/sikayetvar';
+import { trendyolAdapter } from './adapters/trendyol';
 
 /**
  * Uygulanmış kaynak adaptörleri. Yeni kaynaklar buraya eklenir.
- * NOT: Tarayıcı tabanlı adaptörler (Pinterest/TikTok/Amazon) `browser-pool`'u DİNAMİK
- * import eder; bu yüzden bu modülü import eden web bundle'ına Playwright sızmaz.
+ * NOT: Tarayıcı tabanlı adaptörler (Pinterest/TikTok/Amazon/Şikayetvar/Trendyol) `browser-pool`'u
+ * DİNAMİK import eder; bu yüzden bu modülü import eden web bundle'ına Playwright sızmaz.
+ * Google Trends fetch tabanlıdır (RSS, güvenilir).
  */
 export const adapters: Partial<Record<ResearchSource, SourceAdapter>> = {
   HACKERNEWS: hackerNewsAdapter,
@@ -19,6 +23,9 @@ export const adapters: Partial<Record<ResearchSource, SourceAdapter>> = {
   PINTEREST: pinterestAdapter,
   TIKTOK: tiktokAdapter,
   AMAZON: amazonAdapter,
+  GOOGLE_TRENDS: googleTrendsAdapter,
+  SIKAYETVAR: sikayetvarAdapter,
+  TRENDYOL: trendyolAdapter,
 };
 
 /** Kaynak için adaptörü döner; uygulanmamışsa açık hata fırlatır. */
@@ -42,6 +49,9 @@ export { etsyAdapter } from './adapters/etsy';
 export { pinterestAdapter } from './adapters/pinterest';
 export { tiktokAdapter } from './adapters/tiktok';
 export { amazonAdapter } from './adapters/amazon';
+export { googleTrendsAdapter } from './adapters/google-trends';
+export { sikayetvarAdapter } from './adapters/sikayetvar';
+export { trendyolAdapter } from './adapters/trendyol';
 export { fetchJson, fetchText, type FetchOptions } from './http';
 export { USER_AGENTS, randomUserAgent } from './user-agents';
 // NOT: Playwright browser-pool ayrı giriş noktasındadır (`@velora/scraping/browser`)

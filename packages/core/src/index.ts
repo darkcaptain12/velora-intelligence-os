@@ -1,5 +1,12 @@
 export { scoreItem, scoreItems, summarizeScores } from './scoring/research-score';
 export {
+  scoreOpportunity,
+  computeSeasonality,
+  computePriority,
+  type OpportunitySignals,
+  type OpportunityScore,
+} from './opportunity/score';
+export {
   canTransition,
   nextStates,
   LIFECYCLE_LABELS,

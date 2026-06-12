@@ -25,6 +25,8 @@ export const QUEUE_NAMES = {
   autoDesign: 'autoDesign',
   autoPilot: 'autoPilot',
   printifyPublish: 'printifyPublish',
+  productDiscovery: 'productDiscovery',
+  validateOpportunity: 'validateOpportunity',
 } as const;
 
 export type QueueName = keyof typeof QUEUE_NAMES;
@@ -53,6 +55,10 @@ export interface JobDataMap {
   autoPilot: { brandId: string };
   /** Tasarımı Printify'a yükle + ürün+mockup oluştur (Shopify yayını ayrı/kapı arkasında). */
   printifyPublish: { productId: string };
+  /** Ürün Keşif: kaynaklardan fırsat üret + 6-boyut skor + seasonality + priority. */
+  productDiscovery: { brandId: string };
+  /** Satış doğrulama: fırsat için validationScore üret + priority güncelle (Opportunity-First kapısı). */
+  validateOpportunity: { opportunityId: string };
 }
 
 const _queues = new Map<string, Queue>();
