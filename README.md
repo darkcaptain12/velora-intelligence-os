@@ -1,14 +1,15 @@
 # VELORA AI COMMERCE OS
 
 Yapay zeka destekli, tam otomasyonlu, çok markaya hazır e-ticaret operasyon sistemi.
-Tek operatör, kurumsal seviye: ürün araştır → tasarım üret → gerçekçi mockup → Shopify'a yayınla →
-reklam → finans → haftalık AI CEO raporu. **Sürüm 1.1.0 — canlı (Konfora mağazası).**
+Tek operatör, kurumsal seviye: ürün araştır → tasarım üret → **Printify** (print-on-demand) ile
+mockup + ürün → Shopify'a yayınla → **siparişler otomatik basılıp kargolanır** → reklam → finans →
+haftalık AI CEO raporu. **Sürüm 1.2.0 — canlı (Konfora mağazası, Printify entegre).**
 
 > Kullanım kılavuzu: [KULLANIM.md](KULLANIM.md) · Mimari: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Proje hafızası: [CLAUDE.md](CLAUDE.md)
 
 ## Teknoloji
 
-Next.js 14 · TypeScript · TailwindCSS + shadcn · PostgreSQL + Prisma · BullMQ (Redis) · n8n · MinIO · sharp · Playwright · OpenAI + Fal.ai · Docker
+Next.js 14 · TypeScript · TailwindCSS + shadcn · PostgreSQL + Prisma · BullMQ (Redis) · n8n · MinIO · sharp · Playwright · OpenAI + Fal.ai · Printify (POD) · Shopify · Docker
 
 ## Monorepo Yapısı
 
@@ -25,7 +26,7 @@ packages/
   ai/           AI Gateway (OpenAI metin/vision + Fal görsel/video)
   scraping/     Kaynak adaptörleri (Reddit/HN/Etsy/Pinterest/TikTok/Amazon)
   storage/      MinIO/S3 nesne deposu
-  integrations/ Shopify (GraphQL + staged upload + policies) · Meta · SMTP
+  integrations/ Shopify (GraphQL + policies) · Printify (POD: katalog/upload/ürün/yayın) · Meta · SMTP
 infra/          Docker Compose (postgres, redis, minio, n8n, mailhog)
 n8n/workflows/  Zamanlanmış otomasyon (master, finans, guardian, weekly-designs)
 ```
@@ -60,5 +61,5 @@ Giriş: `owner@velora.local` / `velora1234` (varsayılan, `.env`'den).
 
 ## Durum
 
-**v1.1.0** — Tüm 25 modül + üretim sertleştirme (gerçekçi mockup, tünelsiz görsel mimarisi,
-tam otonomi). Detaylı sürüm geçmişi: [CLAUDE.md](CLAUDE.md). Günlük kullanım: [KULLANIM.md](KULLANIM.md).
+**v1.2.0** — Tüm 25 modül + üretim sertleştirme + **Printify print-on-demand** (mockup + otomatik
+fulfillment). Detaylı sürüm geçmişi: [CLAUDE.md](CLAUDE.md). Günlük kullanım: [KULLANIM.md](KULLANIM.md).

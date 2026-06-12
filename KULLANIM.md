@@ -50,11 +50,11 @@ Tasarım sayfasında konuyu yaz. Sistem otomatik olarak **baskıya hazır vektö
 - **Yazı da istiyorsan tırnak içine al** (yazıyı AI değil, sistem net basar):
   `gym motivasyon "BEAST MODE"` · `babalar günü bıyık kravat "BEST DAD EVER"`
 
-Her tasarım otomatik olarak: **4 gerçekçi mockup** (kadın model + erkek model + düz + açılı) +
-**şeffaf baskı dosyası** üretir ve skorlanır.
+Her tasarım otomatik olarak **şeffaf baskı dosyası** üretir ve skorlanır. Giysi mockup'ları
+artık Printify'dan gelir (ürünü "Printify'da Hazırla" deyince — bkz. §4).
 
 > **Baskı dosyası:** "⬇ Baskı dosyasını indir" → mockup değil, **şeffaf arka planlı bare grafik**
-> (doğrudan baskıya gönderebilirsin).
+> (doğrudan baskıya gönderebilirsin). Aynı dosya Printify'a da yüklenir.
 
 ---
 
