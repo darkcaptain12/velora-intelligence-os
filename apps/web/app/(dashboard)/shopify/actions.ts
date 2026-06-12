@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { audit, prisma, products, type LifecycleStatus } from '@velora/db';
 import { enqueue } from '@velora/queue';
-import { fetchProducts, shopifyGraphQL } from '@velora/integrations';
+import { fetchProducts, publishPrintifyProduct, shopifyGraphQL } from '@velora/integrations';
 import { IntegrationError } from '@velora/shared';
 import { actionContext } from '@/lib/action-context';
 
@@ -29,16 +29,41 @@ export async function publishDesign(formData: FormData) {
     designId: data.designId,
     price: data.price,
   });
-  await enqueue('shopifyPublish', { productId: product.id });
+  // Printify ürünü + mockup hazırla (Shopify'a yayın ayrı adım — kullanıcı onayı).
+  await enqueue('printifyPublish', { productId: product.id });
   await audit.log({
     brandId,
     actor,
-    action: 'shopify.publish',
+    action: 'printify.prepare',
     entity: 'Product',
     entityId: product.id,
     payload: data,
     autonomyLevel: 2,
   });
+  revalidatePath('/shopify');
+}
+
+/** Printify ürününü bağlı Shopify mağazasına yayınlar (Printify→Shopify). */
+export async function publishProductToShopify(formData: FormData) {
+  const { actor, brandId } = await actionContext();
+  const id = String(formData.get('id') ?? '');
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product?.printifyProductId || !product.printifyShopId) return;
+  try {
+    await publishPrintifyProduct(brandId, Number(product.printifyShopId), product.printifyProductId);
+    await products.transition(id, 'WINNER', "Shopify'a yayınlandı (Printify)").catch(() => undefined);
+    await audit.log({
+      brandId,
+      actor,
+      action: 'printify.publish_shopify',
+      entity: 'Product',
+      entityId: id,
+      autonomyLevel: 2,
+    });
+  } catch (err) {
+    if (!(err instanceof IntegrationError)) throw err;
+    await audit.log({ brandId, actor, action: 'printify.publish_shopify.failed', entity: 'Product', entityId: id, payload: { error: err.message }, autonomyLevel: 2 });
+  }
   revalidatePath('/shopify');
 }
 

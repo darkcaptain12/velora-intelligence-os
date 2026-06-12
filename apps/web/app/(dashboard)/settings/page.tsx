@@ -5,7 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { saveAutonomy, saveCredential, saveSpendLimits, updateBrand } from './actions';
+import {
+  connectPrintify,
+  saveAutonomy,
+  saveCredential,
+  savePrintifyMarkup,
+  saveSpendLimits,
+  updateBrand,
+} from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,15 +25,19 @@ const PROVIDER_LABELS: { key: Provider; label: string; hint: string }[] = [
   { key: 'SMTP', label: 'SMTP', hint: 'Mail gönderim şifresi' },
   { key: 'ETSY', label: 'Etsy', hint: 'Open API v3 anahtarı (ürün araştırma)' },
   { key: 'PINTEREST', label: 'Pinterest', hint: 'API erişim token (opsiyonel)' },
+  { key: 'PRINTIFY', label: 'Printify', hint: 'Personal Access Token (print-on-demand)' },
 ];
 
 export default async function SettingsPage() {
   const brand = await getActiveBrand();
-  const [credStatus, limits, level, autoMode] = await Promise.all([
+  const [credStatus, limits, level, autoMode, pfShop, pfMarkup, pfVariants] = await Promise.all([
     credentials.listStatus(brand.id),
     spendLimits.list(brand.id),
     settings.get<number>(brand.id, 'autonomy.level', 1),
     settings.get<boolean>(brand.id, 'ads.autoMode', false),
+    settings.get<number>(brand.id, 'printify.shopId', 0),
+    settings.get<number>(brand.id, 'printify.markup', 2.2),
+    settings.get<number[]>(brand.id, 'printify.variantIds', []),
   ]);
 
   const amount = (period: string) =>
@@ -113,6 +124,37 @@ export default async function SettingsPage() {
               </Button>
             </form>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Printify (print-on-demand) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Printify (Print-on-Demand)</CardTitle>
+          <CardDescription>
+            Önce yukarıdan Printify token'ını kaydet, sonra "Bağlantıyı Getir" ile mağaza + varsayılan
+            ürünü çek. Tasarımlar Printify'a yüklenir, mockup'lar oradan gelir, siparişler otomatik basılır.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {pfShop ? (
+              <Badge variant="success">Bağlı · shop #{pfShop} · {pfVariants.length} varyant</Badge>
+            ) : (
+              <Badge variant="warning">Bağlı değil</Badge>
+            )}
+            <form action={connectPrintify}>
+              <Button type="submit" variant="outline" size="sm">Bağlantıyı Getir</Button>
+            </form>
+          </div>
+          <form action={savePrintifyMarkup} className="flex flex-wrap items-end gap-3">
+            <div className="w-40 space-y-1">
+              <Label htmlFor="markup">Kâr çarpanı (markup)</Label>
+              <Input id="markup" name="markup" type="number" step="0.1" min="1" max="10" defaultValue={String(pfMarkup)} />
+            </div>
+            <Button type="submit" variant="outline">Kaydet</Button>
+            <p className="text-xs text-muted-foreground">Perakende fiyat = Printify maliyeti × çarpan.</p>
+          </form>
         </CardContent>
       </Card>
 

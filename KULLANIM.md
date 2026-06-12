@@ -58,15 +58,21 @@ Her tasarım otomatik olarak: **4 gerçekçi mockup** (kadın model + erkek mode
 
 ---
 
-## 4. Mağazaya yayınlama
+## 4. Mağazaya yayınlama (Printify — Print-on-Demand)
 
-1. **Shopify** sayfası → hazır tasarımdan "Yayınla" → sistem AI ürün sayfası (açıklama+SEO+FAQ)
-   yazar, **4 mockup'ı** yükler (ham tasarım ASLA yüklenmez — çalınma koruması), kapak = kadın model.
-2. Ürün **DRAFT (taslak)** olarak gider — gerçek mağazana kötü bir şey kendiliğinden çıkmaz.
-3. Beğenince **"Satışa Aç"** → ürün canlıya (ACTIVE) geçer.
+Tasarımlar **Printify**'a yüklenir; mockup'lar Printify'dan gelir; siparişler Printify tarafından
+**otomatik basılıp kargolanır** (sen dokunmazsın).
 
-**Mağazadan içe aktar:** "Shopify'dan İçe Aktar" → mevcut mağaza ürünlerini sisteme çeker.
-**Manuel ürün:** "Manuel Ürün Ekle" formu.
+1. **Tek seferlik kurulum:** Ayarlar → Printify token'ını kaydet → **"Bağlantıyı Getir"** (mağaza +
+   varsayılan ürün/varyant çekilir). Kâr çarpanını ayarla (fiyat = Printify maliyeti × çarpan).
+   Printify panelinde **Shopify bağlı** + **auto-fulfill açık** olmalı.
+2. **Shopify** sayfası → hazır tasarımdan **"Printify'da Hazırla"** → sistem tasarımı Printify'a yükler,
+   ürünü oluşturur, **gerçek Printify mockup'larını** çeker, maliyete göre fiyatlar (NEW→TEST).
+3. Ürün kartında mockup'ları gör → beğenince **"Shopify'a Yayınla"** → ürün Printify mockup'larıyla
+   Shopify'a çıkar. (Ham tasarım asla mağazaya yüklenmez.)
+4. Sipariş gelince **Printify otomatik basar + kargolar** — sen sadece takip edersin.
+
+**Mağazadan içe aktar:** "Shopify'dan İçe Aktar" · **Manuel ürün:** "Manuel Ürün Ekle".
 
 ---
 

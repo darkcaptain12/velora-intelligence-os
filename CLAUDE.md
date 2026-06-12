@@ -518,6 +518,41 @@ Bu dosya proje hafızası olarak kullanılacaktır.
 
 # PROJE DURUMU / İLERLEME
 
+## Sürüm: 1.2.0 — PRINTIFY (PRINT-ON-DEMAND) ENTEGRASYONU (canlı doğrulandı)
+Tarih: 2026-06-12
+
+### Bu sprint — POD'a geçiş (mockup + fulfillment Printify'dan)
+- **Neden:** Konfora baskılı tişört satıyor. Mockup'lar Printify'dan gelir, tasarım Printify'a
+  yüklenir, ürün Printify→Shopify yayınlanır, **siparişler Printify tarafından otomatik basılıp kargolanır**.
+- **`@velora/integrations/printify/`**: `client.ts` (`printifyFetch`, Bearer, credential PRINTIFY→env),
+  `shops.ts` (`listShops`/`resolveShopId`), `catalog.ts` (`listBlueprints`/`listPrintProviders`/`listVariants`
+  + `resolveDefaults` → blueprint 6 Unisex Heavy Cotton Tee), `uploads.ts` (`uploadImage` url|base64),
+  `products.ts` (`createPrintifyProduct`/`updateVariantPrices`/`publishPrintifyProduct`/`getPrintifyProduct`).
+- **Worker `printify-publish`** (kuyruk `printifyPublish`): şeffaf baskı dosyasını ~2400px upscale →
+  Printify'a yükle → ürün oluştur (ön baskı) → maliyet×markup ile fiyatla → front/default mockup'ları
+  (cap 8) + `printifyProductId`/`printifyShopId`/`cost`/`price` Product'a yaz; NEW→TEST.
+- **Pipeline:** `design.ts` artık sharp `mockup` kuyruğunu TETİKLEMEZ (mockup'lar Printify'dan).
+  `design-score.ts` L3 talebe göre → `printifyPublish` (eski `shopifyPublish` yerine).
+- **DB:** `Provider.PRINTIFY`; `Product.printifyProductId/printifyShopId/mockups(Json)`;
+  `products.setPrintify`/`setShopifyId` (migration `add_printify`).
+- **Ayarlar:** Printify token (şifreli credential) + **"Bağlantıyı Getir"** (`resolveShopId`+`resolveDefaults`
+  → `printify.shopId/blueprintId/printProviderId/variantIds`) + kâr çarpanı (`printify.markup`, vars. 2.2).
+- **/shopify:** "Printify'da Hazırla" (→`printifyPublish`), ürün kartında Printify mockup'ları,
+  **"Shopify'a Yayınla"** (`publishPrintifyProduct`). Manuel ürün + içe aktar korunur.
+- **Config/env:** `PRINTIFY_API_TOKEN` (config + `.env.example`).
+- **Doğrulama (canlı, token Chrome'dan üretildi):** typecheck (11 paket) + `next build` (25 route) ✓ ·
+  `listShops` → Konfora(shopify) shop 27893747 ✓ · tasarım→upload→Printify ürün `6a2bb59e…` + **74 mockup**
+  (maliyet $9.79 → fiyat $21.54 ×2.2) ✓ · front mockup görsel doğrulandı (yeşil tee + JDM baskı) ✓ ·
+  `publishPrintifyProduct` Shopify'a iletildi ✓ · test ürünü temizlendi.
+
+### Teknik Notlar (1.2.0)
+- Sharp mockup sistemi (`lib/mockup.ts`, `src/assets/mockups`, `processors/mockup.ts`) ve
+  `shopify-publish.ts` POD akışından çıktı ama dosyalar duruyor (geri dönüş için).
+- Sipariş/fulfillment: Printify-yayınlı ürün Shopify ürünüdür; sipariş Shopify'a düşer, Printify
+  otomatik basar/kargolar (Printify'da auto-fulfill açık olmalı). Finans Shopify siparişlerini okur.
+- Baskı çözünürlüğü: tasarım 1024px → upload öncesi ~2400px upscale (düz vektör grafik temiz büyür).
+
+### Önceki Durum (arşiv)
 ## Sürüm: 1.1.0 — ÜRETİM SERTLEŞTİRME & TAM OTONOMİ (canlı doğrulandı)
 Tarih: 2026-06-11
 

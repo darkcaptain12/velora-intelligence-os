@@ -10,6 +10,7 @@ import {
   addManualProduct,
   importFromShopify,
   publishDesign,
+  publishProductToShopify,
   publishToActive,
   runHealthCheck,
   transitionProduct,
@@ -109,10 +110,10 @@ export default async function ShopifyPage() {
                   <Input id={`title-${d.id}`} name="title" defaultValue={d.prompt.slice(0, 60)} required />
                 </div>
                 <div className="w-28 space-y-1">
-                  <Label htmlFor={`price-${d.id}`}>Fiyat</Label>
-                  <Input id={`price-${d.id}`} name="price" type="number" min="0" step="0.01" placeholder="299" />
+                  <Label htmlFor={`price-${d.id}`}>Fiyat (oto)</Label>
+                  <Input id={`price-${d.id}`} name="price" type="number" min="0" step="0.01" placeholder="oto" />
                 </div>
-                <Button type="submit">Yayınla</Button>
+                <Button type="submit">Printify'da Hazırla</Button>
               </form>
             ))
           )}
@@ -129,12 +130,23 @@ export default async function ShopifyPage() {
             <p className="p-6 text-sm text-muted-foreground">Henüz ürün yok.</p>
           ) : (
             <div className="divide-y">
-              {products.map((p) => (
+              {products.map((p) => {
+                const mockups = Array.isArray(p.mockups) ? (p.mockups as string[]) : [];
+                return (
                 <div key={p.id} className="flex flex-wrap items-center gap-3 p-4">
-                  <div className="flex-1" style={{ minWidth: 220 }}>
-                    <div className="flex items-center gap-2">
+                  {mockups.length > 0 && (
+                    <div className="flex gap-1">
+                      {mockups.slice(0, 3).map((src, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={src} alt={p.title} className="h-14 w-14 rounded border object-cover" />
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex-1" style={{ minWidth: 200 }}>
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{p.title}</span>
                       <Badge variant={LIFECYCLE_VARIANT[p.status]}>{LIFECYCLE_LABELS[p.status]}</Badge>
+                      {p.printifyProductId && <Badge variant="secondary">Printify</Badge>}
                       {p.shopifyId ? (
                         <Badge variant="success">Shopify'da</Badge>
                       ) : (
@@ -143,10 +155,16 @@ export default async function ShopifyPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {p.printifyProductId && !p.shopifyId && (
+                      <form action={publishProductToShopify}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <Button type="submit" size="sm">Shopify'a Yayınla</Button>
+                      </form>
+                    )}
                     {p.shopifyId && (
                       <form action={publishToActive}>
                         <input type="hidden" name="id" value={p.id} />
-                        <Button type="submit" size="sm">Satışa Aç</Button>
+                        <Button type="submit" size="sm" variant="outline">Satışa Aç</Button>
                       </form>
                     )}
                     {nextStates(p.status).map((to) => (
@@ -160,7 +178,8 @@ export default async function ShopifyPage() {
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

@@ -76,7 +76,7 @@ export async function processDesignScore(job: Job<JobDataMap['designScore']>) {
       title: design.prompt.slice(0, 70),
       designId,
     });
-    await enqueue('shopifyPublish', { productId: product.id });
+    await enqueue('printifyPublish', { productId: product.id });
     await audit.log({
       brandId: design.brandId,
       actor: 'autopilot',
@@ -86,7 +86,7 @@ export async function processDesignScore(job: Job<JobDataMap['designScore']>) {
       payload: { overall, minScore },
       autonomyLevel: 3,
     });
-    logger.info({ designId, overall }, 'L3: talebe göre Shopify\'a otomatik yayınlandı');
+    logger.info({ designId, overall }, 'L3: talebe göre Printify ürünü hazırlandı');
   }
   return { ...scores, overall, autoPublished: level >= 3 && overall >= minScore };
 }

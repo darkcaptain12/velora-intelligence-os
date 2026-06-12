@@ -1,4 +1,4 @@
-import type { LifecycleStatus } from '@prisma/client';
+import type { LifecycleStatus, Prisma } from '@prisma/client';
 import { canTransition, type LifecycleStatus as CoreLifecycle } from '@velora/core';
 import { NotFoundError, ValidationError } from '@velora/shared';
 import { prisma } from '../client';
@@ -43,6 +43,32 @@ export const products = {
       where: { id },
       data: { shopifyId, ...(description ? { description } : {}) },
     }),
+
+  /** Printify ürün/mockup/maliyet bilgisini kaydeder. */
+  setPrintify: (
+    id: string,
+    data: {
+      printifyProductId: string;
+      printifyShopId: string;
+      mockups: string[];
+      cost?: number;
+      price?: number;
+    },
+  ) =>
+    prisma.product.update({
+      where: { id },
+      data: {
+        printifyProductId: data.printifyProductId,
+        printifyShopId: data.printifyShopId,
+        mockups: data.mockups as unknown as Prisma.InputJsonValue,
+        ...(data.cost != null ? { cost: data.cost } : {}),
+        ...(data.price != null ? { price: data.price } : {}),
+      },
+    }),
+
+  /** Shopify yayını sonrası Shopify ürün kimliğini yazar. */
+  setShopifyId: (id: string, shopifyId: string) =>
+    prisma.product.update({ where: { id }, data: { shopifyId } }),
 
   /** Shopify'dan içe aktarımda ürünü shopifyId ile eşitler (varsa günceller). */
   upsertByShopify: (

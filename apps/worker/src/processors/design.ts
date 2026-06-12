@@ -51,7 +51,7 @@ export async function processDesign(job: Job<JobDataMap['design']>) {
     });
     logger.info({ designId, pngUrl, transparentUrl }, 'tasarım üretildi');
 
-    await enqueue('mockup', { designId });
+    // Mockup'lar artık Printify'dan gelir (ürün oluşturulurken); sharp mockup emekli.
     await enqueue('designScore', { designId });
     return { pngUrl };
   } catch (err) {

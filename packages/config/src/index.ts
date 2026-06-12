@@ -65,6 +65,9 @@ const serverSchema = z.object({
   META_AD_ACCOUNT_ID: z.string().default(''),
   META_APP_SECRET: z.string().default(''),
 
+  // Printify (print-on-demand)
+  PRINTIFY_API_TOKEN: z.string().default(''),
+
   // SMTP
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().default(1025),

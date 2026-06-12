@@ -279,6 +279,9 @@ model Product {
   status      LifecycleStatus @default(NEW)
   designId    String?
   shopifyId   String?
+  printifyProductId String?
+  printifyShopId    String?
+  mockups     Json? // Printify mockup URL listesi
   cost        Decimal?        @db.Decimal(12, 2)
   price       Decimal?        @db.Decimal(12, 2)
   createdAt   DateTime        @default(now())
@@ -628,6 +631,7 @@ enum Provider {
   SMTP
   ETSY
   PINTEREST
+  PRINTIFY
 }
 
 enum Source {

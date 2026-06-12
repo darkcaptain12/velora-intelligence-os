@@ -71,6 +71,7 @@ export const credentials = {
       'SMTP',
       'ETSY',
       'PINTEREST',
+      'PRINTIFY',
     ];
     return Object.fromEntries(all.map((p) => [p, setProviders.has(p)])) as Record<
       Provider,

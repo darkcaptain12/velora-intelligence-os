@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { audit, brands, credentials, settings, spendLimits, type Provider } from '@velora/db';
+import { resolveDefaults, resolveShopId } from '@velora/integrations';
+import { IntegrationError } from '@velora/shared';
 import { actionContext } from '@/lib/action-context';
 
 export async function updateBrand(formData: FormData) {
@@ -41,6 +43,7 @@ const PROVIDERS: Provider[] = [
   'SMTP',
   'ETSY',
   'PINTEREST',
+  'PRINTIFY',
 ];
 
 export async function saveCredential(formData: FormData) {
@@ -88,6 +91,44 @@ export async function saveSpendLimits(formData: FormData) {
     payload: values,
     autonomyLevel: 2,
   });
+  revalidatePath('/settings');
+}
+
+/** Printify bağlantısını getir: shop + varsayılan ürün/sağlayıcı/varyantları kaydet. */
+export async function connectPrintify() {
+  const { actor, brandId } = await actionContext();
+  try {
+    const shopId = await resolveShopId(brandId);
+    if (!shopId) throw new IntegrationError('PRINTIFY', 'Bağlı shop bulunamadı');
+    const d = await resolveDefaults(brandId);
+    await Promise.all([
+      settings.set(brandId, 'printify.shopId', shopId),
+      settings.set(brandId, 'printify.blueprintId', d.blueprintId),
+      settings.set(brandId, 'printify.printProviderId', d.printProviderId),
+      settings.set(brandId, 'printify.variantIds', d.variantIds),
+      settings.set(brandId, 'printify.connected', true),
+    ]);
+    await audit.log({
+      brandId,
+      actor,
+      action: 'printify.connect',
+      entity: 'Setting',
+      payload: { shopId, blueprintId: d.blueprintId, variants: d.variantIds.length },
+      autonomyLevel: 2,
+    });
+  } catch (err) {
+    if (!(err instanceof IntegrationError)) throw err;
+    await settings.set(brandId, 'printify.lastError', err.message);
+  }
+  revalidatePath('/settings');
+}
+
+/** Printify kâr marjı (markup) çarpanını kaydeder. */
+export async function savePrintifyMarkup(formData: FormData) {
+  const { actor, brandId } = await actionContext();
+  const markup = z.coerce.number().min(1).max(10).parse(formData.get('markup'));
+  await settings.set(brandId, 'printify.markup', markup);
+  await audit.log({ brandId, actor, action: 'printify.markup', entity: 'Setting', payload: { markup }, autonomyLevel: 2 });
   revalidatePath('/settings');
 }
 

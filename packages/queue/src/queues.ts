@@ -24,6 +24,7 @@ export const QUEUE_NAMES = {
   backup: 'backup',
   autoDesign: 'autoDesign',
   autoPilot: 'autoPilot',
+  printifyPublish: 'printifyPublish',
 } as const;
 
 export type QueueName = keyof typeof QUEUE_NAMES;
@@ -50,6 +51,8 @@ export interface JobDataMap {
   autoDesign: { brandId: string; count?: number };
   /** Tam otonom orkestratör: araştır→trend→tasarım→(talebe göre)yayın→reklam→rapor. */
   autoPilot: { brandId: string };
+  /** Tasarımı Printify'a yükle + ürün+mockup oluştur (Shopify yayını ayrı/kapı arkasında). */
+  printifyPublish: { productId: string };
 }
 
 const _queues = new Map<string, Queue>();

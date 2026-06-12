@@ -21,6 +21,7 @@ import { processWeeklyReport } from './processors/weekly-report';
 import { processBackup } from './processors/backup';
 import { processAutoDesign } from './processors/auto-design';
 import { processAutoPilot } from './processors/auto-pilot';
+import { processPrintifyPublish } from './processors/printify-publish';
 
 const env = serverEnv();
 const connection = getConnection();
@@ -154,6 +155,13 @@ workers.push(
   new Worker(QUEUE_NAMES.autoPilot, async (job) => processAutoPilot(job), {
     connection,
     concurrency: 1,
+  }),
+);
+
+workers.push(
+  new Worker(QUEUE_NAMES.printifyPublish, async (job) => processPrintifyPublish(job), {
+    connection,
+    concurrency: 2,
   }),
 );
 
