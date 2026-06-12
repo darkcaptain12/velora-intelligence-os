@@ -97,6 +97,56 @@ export async function fetchProducts(brandId: string, first = 100): Promise<Shopi
   return data.products.nodes;
 }
 
+export interface UpdateProductSeoInput {
+  descriptionHtml?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  tags?: string[];
+  handle?: string;
+}
+
+interface ProductUpdateResult {
+  productUpdate: {
+    product: { id: string; handle: string } | null;
+    userErrors: { field: string[]; message: string }[];
+  };
+}
+
+/** Shopify üründe SEO + içerik + etiket + handle günceller (Product Intelligence Engine). */
+export async function updateProductSeoAndContent(
+  brandId: string,
+  shopifyProductId: string,
+  input: UpdateProductSeoInput,
+): Promise<{ id: string; handle: string }> {
+  const mutation = `
+    mutation productUpdate($input: ProductInput!) {
+      productUpdate(input: $input) {
+        product { id handle }
+        userErrors { field message }
+      }
+    }`;
+  const variables = {
+    input: {
+      id: shopifyProductId,
+      ...(input.descriptionHtml != null ? { descriptionHtml: input.descriptionHtml } : {}),
+      ...(input.tags ? { tags: input.tags } : {}),
+      ...(input.handle ? { handle: input.handle } : {}),
+      ...(input.seoTitle != null || input.seoDescription != null
+        ? { seo: { title: input.seoTitle, description: input.seoDescription } }
+        : {}),
+    },
+  };
+  const data = await shopifyGraphQL<ProductUpdateResult>(brandId, mutation, variables);
+  const { product, userErrors } = data.productUpdate;
+  if (userErrors.length > 0) {
+    throw new IntegrationError('SHOPIFY', 'Ürün güncellenemedi', userErrors);
+  }
+  if (!product) {
+    throw new IntegrationError('SHOPIFY', 'Ürün güncellendi ancak yanıt boş');
+  }
+  return product;
+}
+
 interface ProductsHealthResult {
   products: {
     nodes: {

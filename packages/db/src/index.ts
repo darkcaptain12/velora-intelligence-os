@@ -17,6 +17,10 @@ export {
 } from './services/finance';
 export { competitors, suppliers, emails, trends, creativeTests } from './services/crm';
 export { opportunities } from './services/opportunities';
+export {
+  productIntelligence,
+  type ProductIntelligenceResult,
+} from './services/product-intelligence';
 export { backups } from './services/backups';
 
 // Prisma'nın ürettiği tüm tip ve enum'ları @velora/db üzerinden yeniden dışa aktar.

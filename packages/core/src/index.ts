@@ -7,6 +7,11 @@ export {
   type OpportunityScore,
 } from './opportunity/score';
 export {
+  scoreProductIntelligence,
+  type ProductIntelligenceSignals,
+  type ProductIntelligenceScore,
+} from './product-intelligence/score';
+export {
   canTransition,
   nextStates,
   LIFECYCLE_LABELS,

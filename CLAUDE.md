@@ -518,6 +518,89 @@ Bu dosya proje hafızası olarak kullanılacaktır.
 
 # PROJE DURUMU / İLERLEME
 
+## Sürüm: 1.3.0 — STRATEJİK DÖNÜŞÜM SPRINT 1: OPPORTUNITY-FIRST + ÜRÜN ZEKASI MOTORU (canlı doğrulandı)
+Tarih: 2026-06-12
+
+### Bu sprint — mimari dönüşüm: Fırsat Bul → Skorla → Doğrula → Onayla → Tasarım → ... → Finans
+- **Neden:** Rastgele tasarım üretmek yerine önce **pazar fırsatı** bulunup skorlanır; yalnızca
+  **satış doğrulaması** geçen fırsatlar tasarıma dönüşür (sert kapı: `validationScore>=60`).
+  Printify artık **pasif** (varsayılan kapalı) — yayın doğrudan Shopify'a (mockup yine sharp ile).
+- **Fırsat/Keşif merkezi (`@velora/db` `Opportunity` modeli)**: `kind` (TREND/PROBLEM/EVENT),
+  6-boyut `opportunityScore` (core `scoreOpportunity` — pazar büyüklüğü dahil), `validationScore`,
+  `seasonalityScore` (`computeSeasonality`), `priorityScore` (`computePriority`), `status`,
+  `eventDate`. Migration `add_opportunity`. `Source` enum'a `+TRENDYOL/HEPSIBURADA/SIKAYETVAR/
+  INSTAGRAM/GOOGLE_TRENDS`. `packages/db/src/services/opportunities.ts`.
+- **Yeni kaynak adaptörleri** (`@velora/scraping`): `googleTrends` (RSS, TREND), `sikayetvar`
+  (Playwright, **PROBLEM**-tipi fırsat — şikayet hacmi), `trendyol` (Playwright, ürün/fiyat sinyali).
+- **Worker `productDiscovery`**: TREND/PROBLEM/EVENT kaynaklarını tarar → 6-boyut skor + seasonality
+  + priority → `Opportunity` kayıtları. **Etkinlik Fırsatları**: yaklaşan özel günler
+  (`lib/special-days.ts`) otomatik EVENT-tipi fırsat olarak eklenir (`eventDate` ile).
+- **Worker `validateOpportunity`**: fırsatı AI ile değerlendirir → `validationScore` +
+  `priorityScore` günceller, `status` VALIDATED/REJECTED. **Sert kapı**: tasarıma dönüştürme
+  yalnızca `validationScore>=60` olan fırsatlar için tetiklenir.
+- **Printify PASİF**: `settings.printify.passive` (varsayılan `true`). Pasifken `design.ts` kendi
+  sharp mockup'ını üretir (Printify tetiklenmez), `design-score`/yayın doğrudan Shopify'a
+  (`shopifyPublish`). Kod/şema korunur — Ayarlar'dan toggle ile Printify tekrar etkinleştirilebilir.
+- **Web**: `/discovery` (priority sıralı fırsat listesi + doğrula/dönüştür aksiyonları),
+  `/validation` (doğrulanan/reddedilen fırsatlar), Komuta Merkezi'nde **"En İyi Fırsatlar"**
+  widget'ı, sidebar.
+- **n8n**: `daily-discovery` workflow (eski haftalık tasarım workflow'u yerine — günlük fırsat
+  taraması).
+- **Doğrulama (canlı):** typecheck (11 paket) ✓ · `productDiscovery` → **11 fırsat** (1 EVENT +
+  10 TREND) oluşturuldu — PROBLEM-tipi (Şikayetvar, Playwright) bu makinede tarayıcı binary'si
+  kurulu olmadığından WARN ile atlandı, run SUCCESS ✓ · `validateOpportunity` → skor **62**,
+  durum **VALIDATED** ✓ · `/discovery`, `/validation`, `/dashboard` (En İyi Fırsatlar widget'ı)
+  200 + doğru veriyle render ✓.
+
+### Bu sprint — Ürün Zekası Motoru (Product Intelligence Engine, Sprint 1 madde 6)
+- **Tetik:** Shopify ürün `products/create`/`products/update` webhook'u (`x-shopify-topic`
+  başlığına göre yönlendirme; `orders/*` davranışı korunur). Webhook, REST sayısal `id`'yi
+  `gid://shopify/Product/<id>` formatına çevirip `products.upsertByShopify` çağırır
+  (`Product.shopifyId` konvansiyonu GraphQL gid'dir — REST/GraphQL ID karışıklığı burada çözüldü).
+- **DB `ProductIntelligence`** (1:1 `Product`, migration `add_product_intelligence`, `AssetStatus`
+  yeniden kullanıldı): **SEO** (title/description/keywords/handle), **İçerik**
+  (description/shortDescription/story/FAQ), **Reklam** (Meta primaryText/headline/description),
+  **Satış Açıları** (emotional/premium/humorous/gift/problemSolving), **Hedef Kitle**
+  (primary/secondary/ageGroup/interests), **UGC** (brief/scenario/hooks/videoFlows),
+  **Product Intelligence Score** (json 6-boyut + `scoreTotal`).
+- **core `scoreProductIntelligence`** (`packages/core/src/product-intelligence/score.ts`):
+  deterministik ağırlıklı toplam — satış potansiyeli %30, kârlılık %25, (100−rekabet) %15,
+  (100−reklam zorluğu) %10, (100−iade riski) %10, (100−tedarik riski) %10.
+- **AI prompt** (`prompts.productIntelligence`): tek çağrıda SEO+içerik+reklam+satış açıları+
+  kitle+UGC+6-boyut skor JSON döner.
+- **Worker `productIntelligence`** (kuyruk `productIntelligence`, concurrency 2): AI çağrısı →
+  JSON ayrıştır → skor hesapla → body_html üret (paragraflar+Hikaye+SSS) → `ProductIntelligence`
+  kaydet (READY/FAILED) → **varsa Shopify ürününe geri yaz** (`updateProductSeoAndContent`:
+  descriptionHtml, seo.title/description, tags, handle) — Shopify yazımı hata verirse sadece
+  `warn` loglanır (ana akış bozulmaz).
+- **`@velora/integrations`**: `updateProductSeoAndContent` (Shopify `productUpdate` mutation,
+  `userErrors`→`IntegrationError`).
+- **Web `/intelligence`**: tüm ürünler + PI Score + durum rozeti + "Üret"/"Yeniden Üret" +
+  READY'de SEO/İçerik/Reklam/Satış Açıları/Hedef Kitle/UGC kartları. Sidebar'a "Ürün Zekası"
+  (Sparkles ikonu) eklendi.
+- **Doğrulama (canlı):** typecheck (11 paket) ✓ · `next build` (29 route, `/intelligence` dahil) ✓
+  · "jdm r35" ürünü (`cmq9zfplr...`) için iş kuyruğa alındı → worker "ürün zekası üretildi"
+  (scoreTotal **72**) ✓ → DB `ProductIntelligence` READY, tüm alanlar dolu ✓ → **Shopify ürünü
+  canlı güncellendi** (SEO title/description, 5 etiket, handle `jdm-r35-tisort`, descriptionHtml —
+  GraphQL ile doğrulandı) ✓ → `/intelligence` 200, PI Score 72 + tüm bölümler doğru render ✓.
+
+### Teknik Notlar (1.3.0)
+- **Next.js dev server + Prisma Client önbelleği**: `prisma migrate dev` ile şema değişip Prisma
+  Client yeniden üretildiğinde, ÇALIŞAN `next dev` süreci `node_modules/.prisma/client`'ı izlemez
+  (webpack `node_modules`'ı watch etmez) → yeni model (`prisma.productIntelligence`) `undefined`
+  kalır → `Cannot read properties of undefined (reading 'findMany')`. **Çözüm:** migration sonrası
+  web dev sürecini yeniden başlat (worker zaten `tsx watch` ile prisma client değişiminde otomatik
+  restart oluyor — yalnızca `next dev` etkilenir).
+- Artık zincir tam otomatik: Fırsat → Doğrulama (≥60) → Tasarım → Yayın (Shopify) → **Ürün Zekası**
+  (SEO/içerik/reklam/kitle/UGC otomatik geri yazım) → Finans/Operasyon Skoru.
+
+### Sıradaki: Sprint 2 — Ürün Zekası çıktısının Reklam + Video akışına bağlanması
+`ProductIntelligence.ads`/`ugc` alanlarını Meta Reklam Merkezi (kreatif taslağı) ve Video
+Fabrikası'na (UGC video brief) bağlamak. Şikayetvar/Trendyol Playwright adaptörlerinin bu
+ortamda canlı doğrulanması için `pnpm exec playwright install chromium` gerekiyor (şu an WARN
+ile zarifçe atlanıyor, run başarısız olmuyor).
+
+### Önceki Durum (arşiv)
 ## Sürüm: 1.2.0 — PRINTIFY (PRINT-ON-DEMAND) ENTEGRASYONU (canlı doğrulandı)
 Tarih: 2026-06-12
 

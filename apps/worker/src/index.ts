@@ -24,6 +24,7 @@ import { processAutoPilot } from './processors/auto-pilot';
 import { processPrintifyPublish } from './processors/printify-publish';
 import { processProductDiscovery } from './processors/product-discovery';
 import { processValidateOpportunity } from './processors/validate-opportunity';
+import { processProductIntelligence } from './processors/product-intelligence';
 
 const env = serverEnv();
 const connection = getConnection();
@@ -176,6 +177,13 @@ workers.push(
 
 workers.push(
   new Worker(QUEUE_NAMES.validateOpportunity, async (job) => processValidateOpportunity(job), {
+    connection,
+    concurrency: 2,
+  }),
+);
+
+workers.push(
+  new Worker(QUEUE_NAMES.productIntelligence, async (job) => processProductIntelligence(job), {
     connection,
     concurrency: 2,
   }),

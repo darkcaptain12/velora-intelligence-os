@@ -36,34 +36,35 @@ model Brand {
   updatedAt DateTime @updatedAt
 
   // İlişkiler (back-relations)
-  credentials      ApiCredential[]
-  settings         Setting[]
-  auditLogs        AuditLog[]
-  researchRuns     ResearchRun[]
-  trends           Trend[]
-  opportunities    Opportunity[]
-  competitors      Competitor[]
-  designBriefs     DesignBrief[]
-  designs          Design[]
-  mockups          Mockup[]
-  videos           Video[]
-  products         Product[]
-  collections      ShopifyCollection[]
-  healthChecks     ShopifyHealthCheck[]
-  adCampaigns      AdCampaign[]
-  adMetrics        AdMetric[]
-  creativeTests    CreativeTest[]
-  suppliers        Supplier[]
-  emails           EmailMessage[]
-  orders           Order[]
-  financeSnapshots FinanceSnapshot[]
-  operationScores  OperationScore[]
-  aiReports        AIReport[]
-  tasks            Task[]
-  jobs             Job[]
-  spendLimits      SpendLimit[]
-  backups          Backup[]
-  usageLogs        UsageLog[]
+  credentials         ApiCredential[]
+  settings            Setting[]
+  auditLogs           AuditLog[]
+  researchRuns        ResearchRun[]
+  trends              Trend[]
+  opportunities       Opportunity[]
+  competitors         Competitor[]
+  designBriefs        DesignBrief[]
+  designs             Design[]
+  mockups             Mockup[]
+  videos              Video[]
+  products            Product[]
+  productIntelligence ProductIntelligence[]
+  collections         ShopifyCollection[]
+  healthChecks        ShopifyHealthCheck[]
+  adCampaigns         AdCampaign[]
+  adMetrics           AdMetric[]
+  creativeTests       CreativeTest[]
+  suppliers           Supplier[]
+  emails              EmailMessage[]
+  orders              Order[]
+  financeSnapshots    FinanceSnapshot[]
+  operationScores     OperationScore[]
+  aiReports           AIReport[]
+  tasks               Task[]
+  jobs                Job[]
+  spendLimits         SpendLimit[]
+  backups             Backup[]
+  usageLogs           UsageLog[]
 }
 
 model ApiCredential {
@@ -160,24 +161,24 @@ model Trend {
 
 /// Ürün Avcısı'nın ürettiği satış fırsatı (Opportunity-First mimarisinin merkezi).
 model Opportunity {
-  id               String            @id @default(cuid())
-  brandId          String
-  title            String
-  niche            String
-  kind             OpportunityKind   @default(TREND)
-  sourceSignals    Json? // ham sinyaller (kaynak başlıkları, sayılar, vb.)
-  opportunityScore Json? // { talep, rekabet, karlilik, uretilebilirlik, trend, pazarBuyuklugu, total }
-  validationScore  Int? // 0-100 (Validation Center)
+  id                String            @id @default(cuid())
+  brandId           String
+  title             String
+  niche             String
+  kind              OpportunityKind   @default(TREND)
+  sourceSignals     Json? // ham sinyaller (kaynak başlıkları, sayılar, vb.)
+  opportunityScore  Json? // { talep, rekabet, karlilik, uretilebilirlik, trend, pazarBuyuklugu, total }
+  validationScore   Int? // 0-100 (Validation Center)
   validationSignals Json?
-  seasonalityScore Int? // 0-100 (Timing/Seasonality)
-  priorityScore    Int? // 0-100 ana sıralama
-  aiRationale      String?
-  status           OpportunityStatus @default(NEW)
-  eventDate        DateTime? // kind=EVENT için
-  week             String // ISO hafta
-  designId         String? // "Tasarıma Dönüştür" sonrası bağlanan tasarım
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  seasonalityScore  Int? // 0-100 (Timing/Seasonality)
+  priorityScore     Int? // 0-100 ana sıralama
+  aiRationale       String?
+  status            OpportunityStatus @default(NEW)
+  eventDate         DateTime? // kind=EVENT için
+  week              String // ISO hafta
+  designId          String? // "Tasarıma Dönüştür" sonrası bağlanan tasarım
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
@@ -300,25 +301,26 @@ model Video {
 // ============================================================
 
 model Product {
-  id          String          @id @default(cuid())
-  brandId     String
-  title       String
-  description String?
-  status      LifecycleStatus @default(NEW)
-  designId    String?
-  shopifyId   String?
+  id                String          @id @default(cuid())
+  brandId           String
+  title             String
+  description       String?
+  status            LifecycleStatus @default(NEW)
+  designId          String?
+  shopifyId         String?
   printifyProductId String?
   printifyShopId    String?
-  mockups     Json? // Printify mockup URL listesi
-  cost        Decimal?        @db.Decimal(12, 2)
-  price       Decimal?        @db.Decimal(12, 2)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  mockups           Json? // Printify mockup URL listesi
+  cost              Decimal?        @db.Decimal(12, 2)
+  price             Decimal?        @db.Decimal(12, 2)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   brand           Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
   design          Design?                 @relation(fields: [designId], references: [id], onDelete: SetNull)
   lifecycleEvents ProductLifecycleEvent[]
   videos          Video[]
+  intelligence    ProductIntelligence?
 
   @@unique([brandId, shopifyId])
   @@index([brandId, status])
@@ -335,6 +337,52 @@ model ProductLifecycleEvent {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+}
+
+/// Ürün Zekası Motoru: Shopify ürün webhook'unda (create/update) tetiklenir.
+/// SEO + İçerik + Reklam + Satış Açısı + Kitle + UGC üretir, Product Intelligence Score hesaplar.
+model ProductIntelligence {
+  id        String      @id @default(cuid())
+  brandId   String
+  productId String      @unique
+  status    AssetStatus @default(GENERATING)
+
+  // SEO Engine
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    Json? // string[]
+  handle         String?
+
+  // Content Engine
+  description      String? // HTML açıklama (Shopify body_html)
+  shortDescription String?
+  story            String?
+  faq              Json? // { question, answer }[]
+
+  // Ad Engine (Meta/Facebook)
+  ads Json? // { primaryText, headline, description }
+
+  // Sales Angle Engine
+  salesAngles Json? // { emotional, premium, humorous, gift, problemSolving }
+
+  // Audience Engine
+  audience Json? // { primary, secondary, ageGroup, interests: string[] }
+
+  // UGC Engine
+  ugc Json? // { brief, scenario, hooks: string[], videoFlows: string[] }
+
+  // Product Intelligence Score (0-100)
+  score      Json? // { salesPotential, competition, profitability, adDifficulty, returnRisk, supplyRisk, total }
+  scoreTotal Int?
+
+  aiRationale String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, scoreTotal])
 }
 
 // ============================================================
@@ -381,8 +429,8 @@ model AdCampaign {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  adsets  AdSet[]
+  brand  Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  adsets AdSet[]
 
   @@unique([brandId, metaId])
 }

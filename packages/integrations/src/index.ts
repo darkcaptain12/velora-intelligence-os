@@ -4,8 +4,10 @@ export {
   createProduct,
   fetchProducts,
   fetchProductsForHealth,
+  updateProductSeoAndContent,
   type CreateProductInput,
   type ShopifyProductNode,
+  type UpdateProductSeoInput,
 } from './shopify/products';
 export { stageUploadImage } from './shopify/upload';
 export { updateShopPolicies, createLegalPage, type ShopPolicyInput } from './shopify/policies';
