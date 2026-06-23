@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.1.1",
+    "@radix-ui/react-tabs": "^1.1.14",
     "@velora/ai": "workspace:*",
     "@velora/config": "workspace:*",
     "@velora/core": "workspace:*",
@@ -20,7 +22,6 @@
     "@velora/scraping": "workspace:*",
     "@velora/shared": "workspace:*",
     "@velora/storage": "workspace:*",
-    "@radix-ui/react-slot": "^1.1.1",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

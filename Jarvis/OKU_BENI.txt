@@ -1,0 +1,72 @@
+╔══════════════════════════════════════════════════════════╗
+║                    J.A.R.V.I.S                            ║
+║              macOS Kişisel AI Asistanı                    ║
+╚══════════════════════════════════════════════════════════╝
+
+KURULUM — 3 ADIM
+
+
+① KUR.command  dosyasına ÇİFT TIKLA
+
+
+   ⚠️  "Açılmadı / geliştirici doğrulanamadı" uyarısı çıkarsa:
+   ───────────────────────────────────────────────────────────
+   Bu normal (uygulama Apple'a kayıtlı değil, zararlı değil).
+   Şöyle izin ver — SADECE BU İLK SEFER GEREKLİ:
+
+      1. Çıkan uyarıda  "Bitti"  de (kapat)
+      2.  Apple menüsü () → Sistem Ayarları
+      3.  Sol menü:  "Gizlilik ve Güvenlik"
+      4.  Aşağı in → "KUR.command engellendi..." yazısını bul
+      5.  Yanındaki  "Yine de Aç"  düğmesine bas
+      6.  Şifreni gir → tekrar  "Aç"  de
+
+   ✅ Bunu bir kez yapınca KUR çalışır ve geri kalan her şeyin
+      iznini otomatik halleder. Bir daha uğraşmazsın.
+   ───────────────────────────────────────────────────────────
+
+   KUR.command; Python, gerekli paketleri ve masaüstü kısayolunu
+   otomatik kurar (birkaç dakika). Mac şifreni isteyebilir.
+
+
+② Kurulum bitince masaüstünde  JARVIS  ikonu oluşur.
+   Ona çift tıkla → JARVIS açılır.
+   (veya klasördeki  BASLAT.command  dosyasına)
+
+
+③ İlk açılışta Gemini API anahtarı istenir (ZORUNLU, ücretsiz):
+
+      1. https://aistudio.google.com/apikey  adresine git
+      2. Google hesabınla giriş → "Create API key"
+      3. Anahtarı kopyala → JARVIS ayarlarına yapıştır
+
+   Birkaç saniye "bağlanıyor" deyip açılır.
+
+
+──────────────────────────────────────────────────────────
+💡 TAVSİYE: Klasörü Downloads/Masaüstü/Belgeler'de BIRAKMA.
+   Ev klasörüne (kullanıcı adın) veya Uygulamalar'a taşı —
+   macOS izin pencereleri daha az çıkar.
+──────────────────────────────────────────────────────────
+
+
+🔐 İZİNLER:
+İlk kullanımda macOS izin ister, hepsine "İzin Ver" de:
+   • Mikrofon        → sesli komut
+   • Ekran Kaydı     → ekran analizi
+   • Erişilebilirlik → medya/WhatsApp kontrolü
+   • Takvim / Anımsatıcılar
+
+
+🎙️  KULLANIM:
+   • "Jarvis" diyerek konuş
+   • veya yazı kutusuna yaz, Enter'a bas
+   • F4: mikrofonu sustur   F6: kamera   ⌘F: tam ekran
+
+
+🔁 TEKRAR AÇMAK:
+   Masaüstündeki JARVIS ikonuna çift tıkla. Kurulumu tekrar
+   yapmana gerek yok. JARVIS'i kapatınca Terminal de kapanır.
+
+
+İyi eğlenceler! 🚀

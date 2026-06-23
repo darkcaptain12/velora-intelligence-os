@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "@velora/config": "workspace:*",
     "@velora/db": "workspace:*",
     "@velora/shared": "workspace:*",

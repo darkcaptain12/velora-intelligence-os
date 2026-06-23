@@ -80,6 +80,8 @@ const serverSchema = z.object({
   N8N_WEBHOOK_BASE: z.string().default('http://localhost:3000/api/webhooks/n8n'),
   // n8n -> app webhook'larını doğrulamak için paylaşılan sır (boşsa webhook reddedilir)
   N8N_WEBHOOK_SECRET: z.string().default(''),
+  // Jarvis Python ↔ VELORA HTTP köprüsü (boşsa endpoint reddeder)
+  JARVIS_API_TOKEN: z.string().default(''),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;

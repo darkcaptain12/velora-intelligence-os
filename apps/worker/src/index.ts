@@ -17,6 +17,7 @@ import { processFinanceSnapshot } from './processors/finance-snapshot';
 import { processMailSend } from './processors/mail-send';
 import { processTrendHunt } from './processors/trend-hunt';
 import { processCompetitorScan } from './processors/competitor-scan';
+import { processCompetitorWatch } from './processors/competitor-watch';
 import { processWeeklyReport } from './processors/weekly-report';
 import { processBackup } from './processors/backup';
 import { processAutoDesign } from './processors/auto-design';
@@ -25,6 +26,10 @@ import { processPrintifyPublish } from './processors/printify-publish';
 import { processProductDiscovery } from './processors/product-discovery';
 import { processValidateOpportunity } from './processors/validate-opportunity';
 import { processProductIntelligence } from './processors/product-intelligence';
+import { processSupplierFinder } from './processors/supplier-finder';
+import { processProductDemand } from './processors/product-demand';
+import { processDemandSync } from './processors/demand-sync';
+import { processDailyBrief } from './processors/daily-brief';
 
 const env = serverEnv();
 const connection = getConnection();
@@ -134,6 +139,13 @@ workers.push(
 );
 
 workers.push(
+  new Worker(QUEUE_NAMES.competitorWatch, async (job) => processCompetitorWatch(job), {
+    connection,
+    concurrency: 1,
+  }),
+);
+
+workers.push(
   new Worker(QUEUE_NAMES.weeklyReport, async (job) => processWeeklyReport(job), {
     connection,
     concurrency: 1,
@@ -186,6 +198,31 @@ workers.push(
   new Worker(QUEUE_NAMES.productIntelligence, async (job) => processProductIntelligence(job), {
     connection,
     concurrency: 2,
+  }),
+);
+
+workers.push(
+  new Worker(QUEUE_NAMES.supplierFinder, async (job) => processSupplierFinder(job), {
+    connection,
+    concurrency: 1,
+  }),
+);
+
+workers.push(
+  new Worker(QUEUE_NAMES.productDemand, async (job) => processProductDemand(job), {
+    connection,
+    concurrency: 1,
+  }),
+);
+
+workers.push(
+  new Worker(QUEUE_NAMES.demandSync, async (job) => processDemandSync(job), {
+    connection,
+    concurrency: 1,
+  }),
+  new Worker(QUEUE_NAMES.dailyBrief, async (job) => processDailyBrief(job), {
+    connection,
+    concurrency: 1,
   }),
 );
 

@@ -13,6 +13,22 @@ interface PIContent {
   faq: { question: string; answer: string }[];
 }
 
+interface CampaignAdSet {
+  name: string;
+  audience: string;
+  interests: string[];
+  dailyBudgetUSD: number;
+}
+
+interface CampaignPrep {
+  campaignName: string;
+  adSets: CampaignAdSet[];
+  hook: string;
+  primaryText: string;
+  headline: string;
+  description: string;
+}
+
 interface PIResult {
   seo: { title: string; description: string; keywords: string[]; handle: string };
   content: PIContent;
@@ -20,6 +36,7 @@ interface PIResult {
   salesAngles: Record<string, string>;
   audience: { primary: string; secondary: string; ageGroup: string; interests: string[] };
   ugc: { brief: string; scenario: string; hooks: string[]; videoFlows: string[] };
+  campaignPrep: CampaignPrep;
   score: ProductIntelligenceSignals;
   rationale: string;
 }
@@ -50,6 +67,14 @@ function parseResult(text: string): PIResult | null {
       salesAngles: (o.salesAngles ?? {}) as Record<string, string>,
       audience: (o.audience ?? { primary: '', secondary: '', ageGroup: '', interests: [] }) as PIResult['audience'],
       ugc: (o.ugc ?? { brief: '', scenario: '', hooks: [], videoFlows: [] }) as PIResult['ugc'],
+      campaignPrep: (o.campaignPrep ?? {
+        campaignName: '',
+        adSets: [],
+        hook: '',
+        primaryText: '',
+        headline: '',
+        description: '',
+      }) as CampaignPrep,
       score: (o.score ?? {}) as ProductIntelligenceSignals,
       rationale: String(o.rationale ?? ''),
     };
@@ -120,6 +145,7 @@ export async function processProductIntelligence(job: Job<JobDataMap['productInt
       salesAngles: parsed.salesAngles,
       audience: parsed.audience,
       ugc: parsed.ugc,
+      campaignPrep: parsed.campaignPrep,
       score,
       scoreTotal: score.total,
       aiRationale: parsed.rationale,

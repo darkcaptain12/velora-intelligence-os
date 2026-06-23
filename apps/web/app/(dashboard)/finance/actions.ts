@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { audit, finance, prisma, tasks, type Prisma } from '@velora/db';
+import { adCampaigns, audit, finance, prisma, tasks, type Prisma } from '@velora/db';
 import { enqueue } from '@velora/queue';
 import { ai } from '@velora/ai';
+import { setCampaignStatus } from '@velora/integrations';
 import { IntegrationError } from '@velora/shared';
 import { actionContext } from '@/lib/action-context';
+import { adjustCampaignBudget, handleMetaError, pauseCampaign } from '@/lib/decision-handlers';
 
 /** Bugünün finans anlık görüntüsünü kuyruğa atar. */
 export async function runFinanceSnapshot() {
@@ -65,5 +67,48 @@ export async function generateFinancialComment() {
       throw err;
     }
   }
+  revalidatePath('/finance');
+}
+
+export async function syncAds() {
+  const { actor, brandId } = await actionContext();
+  await enqueue('adSync', { brandId });
+  await audit.log({ brandId, actor, action: 'ads.sync', entity: 'Brand', entityId: brandId, autonomyLevel: 2 });
+  revalidatePath('/finance');
+}
+
+export async function runGuardian() {
+  const { actor, brandId } = await actionContext();
+  await enqueue('spendGuardian', { brandId });
+  await audit.log({ brandId, actor, action: 'ads.guardian', entity: 'Brand', entityId: brandId, autonomyLevel: 2 });
+  revalidatePath('/finance');
+}
+
+export async function setCampaignState(formData: FormData) {
+  const { actor, brandId } = await actionContext();
+  const id = String(formData.get('id') ?? '');
+  const status = String(formData.get('status') ?? '') as 'ACTIVE' | 'PAUSED';
+  const campaign = await prisma.adCampaign.findUnique({ where: { id } });
+  if (!campaign || (status !== 'ACTIVE' && status !== 'PAUSED')) return;
+  if (status === 'PAUSED') {
+    await pauseCampaign(brandId, actor, id);
+    revalidatePath('/finance');
+    return;
+  }
+  try {
+    await setCampaignStatus(brandId, campaign.metaId, status);
+    await adCampaigns.setStatus(id, status);
+    await audit.log({ brandId, actor, action: 'ads.status', entity: 'AdCampaign', entityId: id, payload: { status }, autonomyLevel: 2 });
+  } catch (err) {
+    await handleMetaError(brandId, err);
+  }
+  revalidatePath('/finance');
+}
+
+export async function setBudget(formData: FormData) {
+  const { actor, brandId } = await actionContext();
+  const id = String(formData.get('id') ?? '');
+  const budget = Number(formData.get('budget'));
+  await adjustCampaignBudget(brandId, actor, id, budget);
   revalidatePath('/finance');
 }

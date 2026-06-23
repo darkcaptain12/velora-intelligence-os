@@ -14,6 +14,7 @@ export interface ProductIntelligenceResult {
   salesAngles: unknown;
   audience: unknown;
   ugc: unknown;
+  campaignPrep: unknown;
   score: unknown;
   scoreTotal: number;
   aiRationale: string;
@@ -26,7 +27,7 @@ export const productIntelligence = {
 
   list: (brandId: string, take = 50) =>
     prisma.productIntelligence.findMany({
-      where: { brandId },
+      where: { brandId, product: { status: { not: 'CLOSED' } } },
       include: { product: true },
       orderBy: [{ scoreTotal: 'desc' }, { updatedAt: 'desc' }],
       take,
@@ -57,6 +58,7 @@ export const productIntelligence = {
         salesAngles: data.salesAngles as Prisma.InputJsonValue,
         audience: data.audience as Prisma.InputJsonValue,
         ugc: data.ugc as Prisma.InputJsonValue,
+        campaignPrep: data.campaignPrep as Prisma.InputJsonValue,
         score: data.score as Prisma.InputJsonValue,
         scoreTotal: data.scoreTotal,
         aiRationale: data.aiRationale,
@@ -65,4 +67,11 @@ export const productIntelligence = {
 
   setFailed: (productId: string) =>
     prisma.productIntelligence.update({ where: { productId }, data: { status: 'FAILED' } }),
+
+  /** Ürün Talep Skoru (Trend Avcısı niş eşleştirmesi) — bkz. `evaluateProductDemand`. */
+  setDemand: (productId: string, data: { demandScore: number; previousDemandScore?: number | null }) =>
+    prisma.productIntelligence.update({
+      where: { productId },
+      data: { demandScore: data.demandScore, previousDemandScore: data.previousDemandScore ?? null },
+    }),
 };

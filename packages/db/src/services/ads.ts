@@ -8,7 +8,7 @@ export const adCampaigns = {
   upsert: (
     brandId: string,
     metaId: string,
-    data: { name: string; status: string; objective: string; dailyBudget?: number },
+    data: { name: string; status: string; objective: string; dailyBudget?: number; productId?: string },
   ) =>
     prisma.adCampaign.upsert({
       where: { brandId_metaId: { brandId, metaId } },
@@ -21,6 +21,28 @@ export const adCampaigns = {
 
   findByMeta: (brandId: string, metaId: string) =>
     prisma.adCampaign.findUnique({ where: { brandId_metaId: { brandId, metaId } } }),
+
+  /** Bir ürün için (varsa) en güncel taslak/kampanya kaydı — Meta Taslak Kampanya izlenebilirliği. */
+  findByProduct: (brandId: string, productId: string) =>
+    prisma.adCampaign.findFirst({
+      where: { brandId, productId },
+      orderBy: { createdAt: 'desc' },
+      include: { adsets: true },
+    }),
+
+  /** Ürüne bağlı tüm taslak/kampanya kayıtları (en yeniden eskiye) — `/studio` Ürün Zekası listesi için. */
+  listDrafts: (brandId: string) =>
+    prisma.adCampaign.findMany({
+      where: { brandId, productId: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      include: { adsets: true },
+    }),
+};
+
+/** Meta ad set'leri (yerel ayna) — Meta Taslak Kampanya (Faz D). */
+export const adSets = {
+  create: (campaignId: string, metaId: string, name: string, status?: string, budget?: number) =>
+    prisma.adSet.create({ data: { campaignId, metaId, name, status, budget } }),
 };
 
 export interface AdMetricInput {

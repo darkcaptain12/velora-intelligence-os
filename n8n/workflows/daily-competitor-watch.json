@@ -1,0 +1,37 @@
+{
+  "id": "CrhvEWS8TZWPvW0o",
+  "name": "VELORA — Daily Competitor Watch (04:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 4 * * *" }] }
+      },
+      "id": "cron-daily-competitor-watch",
+      "name": "Her gün 04:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://web:3000/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.N8N_WEBHOOK_SECRET}}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\":\"daily.competitor_watch\",\"queue\":\"competitorWatch\"}",
+        "options": {}
+      },
+      "id": "competitor-watch",
+      "name": "Rakip İzleme",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {
+    "Her gün 04:00": { "main": [[{ "node": "Rakip İzleme", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

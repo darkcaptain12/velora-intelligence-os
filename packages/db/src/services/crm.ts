@@ -13,10 +13,14 @@ export const competitors = {
       },
     }),
   getById: (id: string) => prisma.competitor.findUnique({ where: { id } }),
-  create: (brandId: string, name: string, url: string) =>
-    prisma.competitor.create({ data: { brandId, name, url } }),
+  create: (brandId: string, name: string, url: string, metaPageId?: string) =>
+    prisma.competitor.create({ data: { brandId, name, url, metaPageId } }),
   addProduct: (competitorId: string, title: string, price: number, currency = 'TRY', url?: string) =>
     prisma.competitorProduct.create({ data: { competitorId, title, price, currency, url } }),
+  addAd: (competitorId: string, data: { platform: string; creativeUrl?: string; copy?: string }) =>
+    prisma.competitorAd.create({
+      data: { competitorId, platform: data.platform, creativeUrl: data.creativeUrl, copy: data.copy },
+    }),
 };
 
 /** Tedarikçi Merkezi. */
@@ -35,7 +39,32 @@ export const suppliers = {
     phone?: string;
     website?: string;
     notes?: string;
+    verified?: boolean;
+    moq?: number;
+    unitCost?: number;
+    costCurrency?: string;
+    deliveryDays?: number;
+    supplierScore?: number;
   }) => prisma.supplier.create({ data: input }),
+  verify: (id: string) => prisma.supplier.update({ where: { id }, data: { verified: true } }),
+  /** MOQ / maliyet / teslimat / skor günceller (Sprint 4 Faz B + Sprint 6 Faz B). */
+  update: (
+    id: string,
+    data: {
+      company?: string;
+      email?: string;
+      phone?: string;
+      website?: string;
+      notes?: string;
+      moq?: number | null;
+      unitCost?: number | null;
+      costCurrency?: string | null;
+      deliveryDays?: number | null;
+      supplierScore?: number | null;
+    },
+  ) => prisma.supplier.update({ where: { id }, data }),
+  setScore: (id: string, score: number) =>
+    prisma.supplier.update({ where: { id }, data: { supplierScore: score } }),
 };
 
 /** Mail Merkezi. */

@@ -16,9 +16,16 @@ export {
   setCampaignStatus,
   setCampaignBudget,
   fetchCampaignInsights,
+  createCampaign,
+  searchInterests,
+  createAdSet,
   type MetaCampaign,
   type MetaInsight,
+  type MetaCampaignDraft,
+  type MetaInterest,
+  type MetaAdSetDraft,
 } from './meta/client';
+export { fetchPageAds, type MetaLibraryAd } from './meta/ad-library';
 export { sendEmail } from './email/smtp';
 
 // Printify (print-on-demand)
@@ -43,3 +50,4 @@ export {
   type PrintifyVariant,
   type CreatePrintifyInput,
 } from './printify/products';
+export { listPrintifyOrders, type PrintifyOrderSummary } from './printify/orders';

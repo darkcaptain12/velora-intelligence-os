@@ -1,5 +1,6 @@
 import { openaiProvider } from './providers/openai';
 import { falProvider } from './providers/fal';
+import { claudeProvider } from './providers/claude';
 
 /**
  * Sağlayıcıdan bağımsız AI Gateway.
@@ -9,6 +10,7 @@ import { falProvider } from './providers/fal';
 export const ai = {
   text: {
     generate: openaiProvider.generateText,
+    claude: claudeProvider.generateText,
   },
   vision: {
     describe: openaiProvider.describeImage,
@@ -22,9 +24,12 @@ export const ai = {
   video: {
     generate: falProvider.generateVideo,
   },
+  search: {
+    web: openaiProvider.searchWeb,
+  },
 };
 
 export { resolveKey, requireKey } from './keys';
 export { logUsage, estimateCost } from './usage';
 export { prompts } from './prompts';
-export type { TextOptions } from './providers/openai';
+export type { TextOptions, WebSearchResult } from './providers/openai';

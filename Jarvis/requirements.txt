@@ -1,0 +1,8 @@
+# JARVIS macOS — Gerekli paketler
+google-genai
+opencv-python
+SpeechRecognition
+pyaudio
+psutil
+Pillow
+requests

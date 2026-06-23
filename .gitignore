@@ -16,6 +16,9 @@ build/
 infra/.env
 *.pem
 *.key
+Jarvis/config/api_keys.json
+Jarvis/config/*.json
+!Jarvis/config/api_keys.example.json
 
 # Prisma
 packages/db/prisma/*.db

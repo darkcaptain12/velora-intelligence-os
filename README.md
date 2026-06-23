@@ -1,54 +1,107 @@
-# VELORA AI COMMERCE OS
+# VELORA INTELLIGENCE OS
 
-Yapay zeka destekli, tam otomasyonlu, çok markaya hazır e-ticaret operasyon sistemi.
-Tek operatör, kurumsal seviye: ürün araştır → tasarım üret → **Printify** (print-on-demand) ile
-mockup + ürün → Shopify'a yayınla → **siparişler otomatik basılıp kargolanır** → reklam → finans →
-haftalık AI CEO raporu. **Sürüm 1.2.0 — canlı (Konfora mağazası, Printify entegre).**
+Yapay zeka destekli, tam otomasyonlu e-ticaret istihbarat ve operasyon sistemi.
+Fırsat bul → Risk analiz et → Tasarım üret → Shopify'a yayınla → Reklam → Finans → AI CEO karar al.
+Sesli komutla (Jarvis) tüm sistemi yönet.
 
-> Kullanım kılavuzu: [KULLANIM.md](KULLANIM.md) · Mimari: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Proje hafızası: [CLAUDE.md](CLAUDE.md)
+**Sürüm 2.3.0** — Risk Engine + Daily Brief + AI CEO 2.0 (Claude) + Jarvis Voice + Tek-Tık Başlatma.
+
+> [API Kurulum Rehberi](docs/API-SETUP-GUIDE.md) · [Mimari](docs/ARCHITECTURE.md) · [Proje Hafızası](CLAUDE.md)
 
 ## Teknoloji
 
-Next.js 14 · TypeScript · TailwindCSS + shadcn · PostgreSQL + Prisma · BullMQ (Redis) · n8n · MinIO · sharp · Playwright · OpenAI + Fal.ai · Printify (POD) · Shopify · Docker
+Next.js 14 · TypeScript · TailwindCSS + shadcn · PostgreSQL + Prisma · BullMQ (Redis) · n8n · MinIO · sharp · Playwright · OpenAI · Claude (Anthropic) · Gemini · Fal.ai · Printify (POD) · Shopify · Meta · Docker
 
 ## Monorepo Yapısı
 
 ```
 apps/
-  web/          Next.js — panel UI + API + Auth + /api/asset (görsel servis)
-  worker/       BullMQ tüketici (tasarım/mockup/video/Shopify/reklam/finans/otonomi)
+  web/          Next.js — panel UI + API + Auth + Jarvis HTTP endpoint
+  worker/       BullMQ tüketici (20 kuyruk: tasarım/video/PI/risk/CEO/finans/reklam)
 packages/
   config/       Çevre değişkeni doğrulama (Zod)
   shared/       Kripto (AES-256-GCM), hatalar, tipler
-  db/           Prisma şema + servisler + seed
-  queue/        BullMQ kuyruk tanımları (17 kuyruk)
-  core/         Skorlama, yaşam döngüsü, guardrail, finans, operasyon skoru
-  ai/           AI Gateway (OpenAI metin/vision + Fal görsel/video)
+  db/           Prisma şema (40+ model) + servisler + seed
+  queue/        BullMQ kuyruk tanımları (20 kuyruk)
+  core/         Risk Engine, skorlama, yaşam döngüsü, guardrail, action-router
+  ai/           AI Gateway (OpenAI + Claude + Fal — metin/vision/görsel/video/arama)
   scraping/     Kaynak adaptörleri (Reddit/HN/Etsy/Pinterest/TikTok/Amazon)
   storage/      MinIO/S3 nesne deposu
-  integrations/ Shopify (GraphQL + policies) · Printify (POD: katalog/upload/ürün/yayın) · Meta · SMTP
+  integrations/ Shopify (GraphQL) · Printify (POD) · Meta (Ads + Ad Library) · SMTP
+Jarvis/         Python sesli asistan (WakeWord + Gemini Live + VELORA Bridge)
+scripts/        Tek-tık başlatma + sesli wake-word dinleyici
 infra/          Docker Compose (postgres, redis, minio, n8n, mailhog)
-n8n/workflows/  Zamanlanmış otomasyon (master, finans, guardian, weekly-designs)
+n8n/workflows/  Zamanlanmış otomasyon (daily-brief, weekly-master, finans, guardian)
 ```
 
-## Gereksinimler
+## 6 Hub
 
-- Node 20+ · pnpm 10+ · Docker Desktop
+| Hub | URL | İçerik |
+|-----|-----|--------|
+| Komuta Merkezi | `/dashboard` | Günün Özeti + Risk Durumu + Bekleyen Onaylar + Jarvis |
+| Ürün Avcısı | `/hunter` | Fırsatlar · Etkinlikler · Trendler · Rakipler · Araştırma |
+| Tasarım Direktörü | `/studio` | Tasarımlar · Videolar · Ürün Zekası · Test Lab |
+| Operasyon Müdürü | `/operations` | Ürünler · Siparişler · Üretim · Kargo · Tedarikçi · Arşiv |
+| Finans Müdürü | `/finance` | Genel Bakış · Reklam Performansı |
+| AI CEO | `/ceo` | Günlük Brifing · Kararlar · Haftalık Raporlar · Stratejik Sinyaller |
 
-## Kurulum
+## Başlatma (3 yol)
 
+### 1. Sesli — "Jarvis" de
+macOS açılışında otomatik başlayan wake-word dinleyici. "Jarvis" deyince tüm stack başlar.
+
+### 2. Masaüstü — VELORA.app çift tıkla
+`~/Desktop/VELORA.app` — Docker + Web + Worker + Jarvis tek seferde.
+
+### 3. Terminal
 ```bash
-cp .env.example .env          # anahtarları doldur (bkz. KULLANIM.md)
-pnpm install
-pnpm infra:up                 # postgres/redis/minio/n8n/mailhog
-pnpm db:generate && pnpm db:migrate
-pnpm dev:worker               # 1. terminal
-pnpm dev:web                  # 2. terminal → http://localhost:3000
+./scripts/velora-start.sh
 ```
 
-Giriş: `owner@velora.local` / `velora1234` (varsayılan, `.env`'den).
+### Manuel Kurulum (ilk kez)
+```bash
+cp .env.example .env          # anahtarları doldur (bkz. docs/API-SETUP-GUIDE.md)
+pnpm install
+docker compose -f infra/docker-compose.yml up -d
+pnpm --filter @velora/db exec dotenv -e ../../.env -- prisma migrate dev
+./scripts/velora-start.sh     # tek-tık: Docker + Web + Worker + Jarvis
+```
 
-## Servis Portları (yerel)
+Giriş: `owner@velora.local` / `velora1234`
+
+## Jarvis Sesli Komutlar
+
+| Komut | İşlev |
+|-------|-------|
+| "Jarvis trend avla" | Trend taraması |
+| "Jarvis rakipleri tara" | Tüm rakip taraması |
+| "Jarvis tedarikçi bul [niş]" | Web aramasıyla tedarikçi öner |
+| "Jarvis rapor üret" | Haftalık CEO raporu |
+| "Jarvis fırsat bul" | Fırsat keşfi |
+| "Jarvis tasarım üret" | Otomatik tasarım |
+| "Jarvis video üret" | UGC video |
+| "Jarvis günlük brifing" | Risk analizi + AI CEO sentez |
+| "Jarvis bugün ne yapmalıyım" | Daily Brief |
+| "Jarvis finans güncelle" | Finans snapshot |
+| "Jarvis seo güncelle" | SEO/içerik yenile |
+| "Jarvis yedek al" | Sistem yedekleme |
+
+## Intelligence OS Modülleri
+
+| Modül | Durum | Açıklama |
+|-------|-------|----------|
+| Opportunity Scanner | ✅ | Reddit/Trends/Etsy/Amazon — Fırsat Skoru 0-100 |
+| Product DNA | ✅ | SEO/içerik/reklam/kitle/UGC — PI Score 6 boyut |
+| Trend Radar | ✅ | Haftalık trend + HIGH/RISING alarm |
+| Jarvis Layer | ✅ | WakeWord + 19 ActionType + sesli komut + TTS + Orb UI |
+| Risk Engine | ✅ | 5 sinyal birleşik risk skoru 0-100 (harcama/reklam/talep/rakip/trend) |
+| Daily Brief | ✅ | Günlük 03:00 pipeline + Risk Engine + Claude CEO sentez |
+| AI CEO 2.0 | ✅ | Claude ile günlük analiz + güven skoru + haftalık karar motoru |
+| Market X-Ray | 🔶 | Rakip tarama var — SWOT/fiyat gap genişletilecek |
+| Notification Center | 🔴 | OneSignal push (Sprint 10) |
+| Mobil PWA | 🔴 | next-pwa (Sprint 10) |
+
+## Servis Portları
 
 | Servis | Port |
 |--------|------|
@@ -59,7 +112,32 @@ Giriş: `owner@velora.local` / `velora1234` (varsayılan, `.env`'den).
 | n8n | 5678 |
 | Mailhog UI | 8025 |
 
-## Durum
+## AI Sağlayıcılar
 
-**v1.2.0** — Tüm 25 modül + üretim sertleştirme + **Printify print-on-demand** (mockup + otomatik
-fulfillment). Detaylı sürüm geçmişi: [CLAUDE.md](CLAUDE.md). Günlük kullanım: [KULLANIM.md](KULLANIM.md).
+| Sağlayıcı | Kullanım | ENV |
+|-----------|----------|-----|
+| OpenAI (GPT-4o-mini) | Metin, vision, web arama, PI üretimi | `OPENAI_API_KEY` |
+| Claude (Sonnet) | CEO günlük analiz, karar sentezi | `ANTHROPIC_API_KEY` |
+| Gemini (Flash) | Jarvis sesli asistan (Live API) | `GEMINI_API_KEY` |
+| Fal.ai | Görsel + video üretimi | `FAL_KEY` |
+
+## Sürüm Geçmişi
+
+| Sürüm | Tarih | İçerik |
+|-------|-------|--------|
+| 2.3.0 | 2026-06-23 | Risk Engine + Daily Brief + AI CEO 2.0 (Claude) |
+| 2.2.0 | 2026-06-18 | Jarvis Orb UI (6-state animated) |
+| 2.1.0 | 2026-06-18 | Jarvis + VELORA entegrasyonu |
+| 2.0.0 | 2026-06-18 | Jarvis tamamlama (17 ActionType) |
+| 1.9.0 | 2026-06-17 | Tedarikçi Skoru V2 + Jarvis V2 + Rakip Alarm V2 |
+| 1.8.0 | 2026-06-17 | Stabilizasyon + Jarvis + Davranış Sinyalleri |
+| 1.7.0 | 2026-06-15 | Talep/Maliyet + Rakip Reklam + Meta Taslak + Karar V2 |
+| 1.6.0 | 2026-06-14 | Operasyon + Otomasyon + Karar Zekası (7 faz) |
+| 1.5.0 | 2026-06-14 | 6 Hub + Sistem Menüsü UI/UX sadeleştirme |
+| 1.4.0 | 2026-06-13 | Etkinlik Takvimi + Kampanya Hazırlık + CEO Sentez |
+| 1.3.0 | 2026-06-12 | Opportunity-First + Ürün Zekası Motoru |
+| 1.2.0 | 2026-06-12 | Printify POD entegrasyonu |
+| 1.1.0 | 2026-06-11 | Üretim sertleştirme + tam otonomi |
+| 1.0.0 | 2026-06-10 | 25 modül tamamlandı |
+
+Detaylı sürüm notları: [CLAUDE.md](CLAUDE.md)

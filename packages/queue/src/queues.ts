@@ -20,6 +20,7 @@ export const QUEUE_NAMES = {
   mailSend: 'mailSend',
   trendHunt: 'trendHunt',
   competitorScan: 'competitorScan',
+  competitorWatch: 'competitorWatch',
   weeklyReport: 'weeklyReport',
   backup: 'backup',
   autoDesign: 'autoDesign',
@@ -28,6 +29,10 @@ export const QUEUE_NAMES = {
   productDiscovery: 'productDiscovery',
   validateOpportunity: 'validateOpportunity',
   productIntelligence: 'productIntelligence',
+  supplierFinder: 'supplierFinder',
+  productDemand: 'productDemand',
+  demandSync: 'demandSync',
+  dailyBrief: 'dailyBrief',
 } as const;
 
 export type QueueName = keyof typeof QUEUE_NAMES;
@@ -48,6 +53,8 @@ export interface JobDataMap {
   mailSend: { emailId: string };
   trendHunt: { brandId: string };
   competitorScan: { competitorId: string };
+  /** Tüm rakipleri tara (fan-out → competitorScan). */
+  competitorWatch: { brandId: string };
   weeklyReport: { brandId: string };
   backup: { brandId?: string };
   /** Trend + özel gün temalarından otomatik tasarım üretimi (haftalık). */
@@ -62,6 +69,13 @@ export interface JobDataMap {
   validateOpportunity: { opportunityId: string };
   /** Ürün Zekası Motoru: Shopify ürün create/update webhook'unda → SEO+içerik+reklam+kitle+UGC+skor. */
   productIntelligence: { productId: string };
+  /** Tedarikçi Bulucu: web araması ile niş için tedarikçi adayları öner (doğrulanmamış). */
+  supplierFinder: { brandId: string; query: string };
+  /** Ürün Talep Skoru: trendHunt sonrası tüm ürünler için niş-bazlı talep skorunu günceller. */
+  productDemand: { brandId: string };
+  /** Gerçek Talep Takibi: pageViews/cartAdds/wishlistAdds davranış sinyallerini haftalık snapshot olarak arşivler. */
+  demandSync: { brandId: string };
+  dailyBrief: { brandId: string };
 }
 
 const _queues = new Map<string, Queue>();

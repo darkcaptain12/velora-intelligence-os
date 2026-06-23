@@ -6,6 +6,7 @@ export {
   type OpportunitySignals,
   type OpportunityScore,
 } from './opportunity/score';
+export { scoreEvent, type EventSignals, type EventScore } from './event/score';
 export {
   scoreProductIntelligence,
   type ProductIntelligenceSignals,
@@ -42,3 +43,36 @@ export {
   type OperationScoreInputs,
   type OperationWeights,
 } from './operation-score/compute';
+export {
+  evaluateTrendAlarm,
+  type TrendAlarmInput,
+  type TrendAlarmResult,
+} from './trend-alarm/score';
+export {
+  evaluateProductDemand,
+  type ProductDemandInput,
+  type ProductDemandResult,
+} from './product-demand/score';
+export {
+  computeBehaviorScore,
+  type BehaviorScoreInput,
+  type BehaviorScoreResult,
+} from './behavior/score';
+export { parseIntent, ActionType, type Intent } from './action-router';
+export {
+  evaluateCompetitorAlarm,
+  type CompetitorAlarmLevel,
+  type CompetitorAlarmResult,
+} from './competitor-alarm';
+export {
+  computeSupplierScore,
+  type SupplierScoreInput,
+  type SupplierScoreResult,
+} from './supplier/score';
+export {
+  computeRiskScore,
+  type RiskEngineInput,
+  type RiskReport,
+  type RiskSignal,
+  type RiskLevel,
+} from './risk-engine';

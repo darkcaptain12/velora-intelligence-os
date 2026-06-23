@@ -42,6 +42,7 @@ model Brand {
   researchRuns        ResearchRun[]
   trends              Trend[]
   opportunities       Opportunity[]
+  commercialEvents    CommercialEvent[]
   competitors         Competitor[]
   designBriefs        DesignBrief[]
   designs             Design[]
@@ -60,9 +61,12 @@ model Brand {
   financeSnapshots    FinanceSnapshot[]
   operationScores     OperationScore[]
   aiReports           AIReport[]
+  aiDecisions         AIDecision[]
+  productConversions  ProductConversion[]
   tasks               Task[]
   jobs                Job[]
   spendLimits         SpendLimit[]
+  dailyBriefs         DailyBrief[]
   backups             Backup[]
   usageLogs           UsageLog[]
 }
@@ -186,15 +190,39 @@ model Opportunity {
   @@index([brandId, priorityScore])
 }
 
+/// Global Event Calendar — ticari önemi olan etkinlikler (spor/alışveriş/kutlama/mevsim).
+/// productDiscovery her gün geniş bir ufukta (180 gün) tüm etkinlikleri burada günceller;
+/// hazırlık penceresine girenler Opportunity'ye (kind=EVENT) dönüştürülür.
+model CommercialEvent {
+  id                  String        @id @default(cuid())
+  brandId             String
+  name                String
+  category            EventCategory
+  eventDate           DateTime
+  prepLeadDays        Int // tasarım+üretim+yayın için gereken hazırlık süresi (gün)
+  trendPotential      Int // 0-100
+  salesPotential      Int // 0-100
+  eventScore          Json? // { trendPotential, salesPotential, readiness, total }
+  linkedOpportunityId String? // hazırlık penceresine girdiğinde bağlanan Opportunity
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, name, eventDate])
+  @@index([brandId, eventDate])
+}
+
 model Competitor {
-  id        String              @id @default(cuid())
-  brandId   String
-  name      String
-  url       String
-  createdAt DateTime            @default(now())
-  brand     Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  products  CompetitorProduct[]
-  ads       CompetitorAd[]
+  id          String              @id @default(cuid())
+  brandId     String
+  name        String
+  url         String
+  metaPageId  String?
+  createdAt   DateTime            @default(now())
+  brand       Brand               @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  products    CompetitorProduct[]
+  ads         CompetitorAd[]
 
   @@index([brandId])
 }
@@ -313,17 +341,44 @@ model Product {
   mockups           Json? // Printify mockup URL listesi
   cost              Decimal?        @db.Decimal(12, 2)
   price             Decimal?        @db.Decimal(12, 2)
+  /// Kullanıcı davranışı sinyalleri (Demand V2 — manuel/webhook ile güncellenir).
+  pageViews         Int?            @default(0)
+  cartAdds          Int?            @default(0)
+  wishlistAdds      Int?            @default(0)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   brand           Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
   design          Design?                 @relation(fields: [designId], references: [id], onDelete: SetNull)
-  lifecycleEvents ProductLifecycleEvent[]
-  videos          Video[]
-  intelligence    ProductIntelligence?
+  lifecycleEvents   ProductLifecycleEvent[]
+  videos            Video[]
+  intelligence      ProductIntelligence?
+  adCampaigns       AdCampaign[]
+  conversionHistory ProductConversion[]
 
   @@unique([brandId, shopifyId])
   @@index([brandId, status])
+}
+
+/// Haftalık talep takip anlık görüntüsü: pageViews/cartAdds/wishlistAdds + davranış skoru.
+/// demandSync job'u her hafta bir satır ekler — zaman serisine dönüşür.
+model ProductConversion {
+  id            String   @id @default(cuid())
+  brandId       String
+  productId     String
+  week          String   // ISO hafta: "2026-W24"
+  pageViews     Int      @default(0)
+  cartAdds      Int      @default(0)
+  wishlistAdds  Int      @default(0)
+  behaviorScore Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, week])
+  @@index([brandId, week])
 }
 
 model ProductLifecycleEvent {
@@ -371,9 +426,16 @@ model ProductIntelligence {
   // UGC Engine
   ugc Json? // { brief, scenario, hooks: string[], videoFlows: string[] }
 
+  // Campaign Prep Engine (Meta hazırlık paketi — otomatik kampanya OLUŞTURMAZ)
+  campaignPrep Json? // { campaignName, adSets: {name, audience, interests: string[], dailyBudgetUSD}[], hook, primaryText, headline, description }
+
   // Product Intelligence Score (0-100)
   score      Json? // { salesPotential, competition, profitability, adDifficulty, returnRisk, supplyRisk, total }
   scoreTotal Int?
+
+  // Ürün Talep Skoru (Trend Avcısı niş eşleştirmesi — bkz. evaluateProductDemand)
+  demandScore         Int?
+  previousDemandScore Int?
 
   aiRationale String?
   createdAt   DateTime @default(now())
@@ -426,13 +488,16 @@ model AdCampaign {
   status      String
   objective   String
   dailyBudget Decimal? @db.Decimal(12, 2)
+  productId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  brand  Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  adsets AdSet[]
+  brand   Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  adsets  AdSet[]
 
   @@unique([brandId, metaId])
+  @@index([productId])
 }
 
 model AdSet {
@@ -512,6 +577,17 @@ model Supplier {
   phone     String?
   website   String?
   notes     String?
+  verified  Boolean  @default(true)
+
+  // MOQ & Birim Maliyet (Sprint 4 Faz B — karşılaştırmalı tedarikçi maliyeti)
+  moq          Int? // Minimum sipariş adedi
+  unitCost     Decimal? @db.Decimal(12, 2)
+  costCurrency String? // örn. "USD", "TRY"
+
+  // Teslimat & Skor (Sprint 6 Faz B — Supplier Score V2)
+  deliveryDays  Int? // Ortalama teslimat süresi (gün)
+  supplierScore Int? // Hesaplanan 0-100 tedarikçi skoru (computeSupplierScore)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -611,6 +687,31 @@ model AIReport {
   @@index([brandId, type])
 }
 
+/// AI CEO Karar Motoru — haftalık rapordan üretilen, tek-tık uygulanabilir kararlar.
+/// Otonomi seviyesinden bağımsız: hepsi PENDING başlar, "Uygula"/"Reddet" bekler.
+model AIDecision {
+  id             String         @id @default(cuid())
+  brandId        String
+  reportId       String?
+  title          String
+  rationale      String
+  action         DecisionAction
+  params         Json?
+  status         DecisionStatus @default(PENDING)
+  /// Güven skoru 0-100 (AI CEO V2 — Faz D Sprint 6)
+  confidence     Int?
+  /// Beklenen etki LOW/MEDIUM/HIGH
+  expectedImpact String?
+  /// Risk seviyesi LOW/MEDIUM/HIGH
+  riskLevel      String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId, status])
+}
+
 // ============================================================
 // GÖREV / İŞ / KORUMA / YEDEK / KULLANIM
 // ============================================================
@@ -661,6 +762,27 @@ model SpendLimit {
   brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@unique([brandId, period])
+}
+
+/// Günlük Brifing — Risk Engine + AI CEO sentezi (Intelligence OS).
+model DailyBrief {
+  id              String   @id @default(cuid())
+  brandId         String
+  date            DateTime @db.Date
+  riskScore       Int      @default(0)
+  riskLevel       String   @default("LOW")
+  riskSignals     Json     @default("[]")
+  topOpportunity  String?
+  topRisk         String?
+  todayTasks      Json     @default("[]")
+  narrative       String?
+  confidence      Int?
+  createdAt       DateTime @default(now())
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, date])
+  @@index([brandId])
 }
 
 model Backup {
@@ -736,6 +858,13 @@ enum OpportunityStatus {
   VALIDATED
   REJECTED
   PURSUED
+}
+
+enum EventCategory {
+  SPOR
+  ALISVERIS
+  KUTLAMA
+  MEVSIM
 }
 
 enum JobStatus {
@@ -821,4 +950,23 @@ enum ReportType {
   WEEKLY
   CEO
   FINANCE
+}
+
+enum DecisionAction {
+  CONVERT_OPPORTUNITY
+  GENERATE_INTELLIGENCE
+  PREP_EVENT_DESIGN
+  ADJUST_AD_BUDGET
+  PAUSE_CAMPAIGN
+  CONTACT_SUPPLIER
+  EXIT_NICHE
+  APPLY_SUPPLIER_COST
+  CREATE_AD_DRAFT
+  GENERIC
+}
+
+enum DecisionStatus {
+  PENDING
+  APPLIED
+  DISMISSED
 }

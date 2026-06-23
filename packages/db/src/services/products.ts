@@ -5,11 +5,15 @@ import { prisma } from '../client';
 
 /** Ürün + Yaşam Döngüsü servisi. Geçişler core durum makinesiyle doğrulanır. */
 export const products = {
-  list: (brandId: string) =>
+  /** CLOSED ürünleri varsayılan olarak hariç tutar (arşiv kirliliği önlemek için). */
+  list: (brandId: string, opts?: { includeArchived?: boolean }) =>
     prisma.product.findMany({
-      where: { brandId },
+      where: {
+        brandId,
+        ...(opts?.includeArchived ? {} : { status: { not: 'CLOSED' as const } }),
+      },
       orderBy: { createdAt: 'desc' },
-      include: { design: true },
+      include: { design: true, intelligence: true },
     }),
 
   getById: (id: string) => prisma.product.findUnique({ where: { id } }),
@@ -69,6 +73,13 @@ export const products = {
   /** Shopify yayını sonrası Shopify ürün kimliğini yazar. */
   setShopifyId: (id: string, shopifyId: string) =>
     prisma.product.update({ where: { id }, data: { shopifyId } }),
+
+  /** Ürün maliyetini günceller (Faz B/E — tedarikçi birim maliyeti uygulama). */
+  setCost: (id: string, cost: number) => prisma.product.update({ where: { id }, data: { cost } }),
+
+  /** Kullanıcı davranışı sinyallerini günceller (Demand V2). */
+  setBehavior: (id: string, data: { pageViews?: number; cartAdds?: number; wishlistAdds?: number }) =>
+    prisma.product.update({ where: { id }, data }),
 
   /** Shopify'dan içe aktarımda ürünü shopifyId ile eşitler (varsa günceller). */
   upsertByShopify: (

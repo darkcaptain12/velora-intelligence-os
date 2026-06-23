@@ -103,3 +103,90 @@ export async function fetchCampaignInsights(
   });
   return data.data;
 }
+
+export interface MetaCampaignDraft {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+}
+
+/**
+ * Yeni kampanya oluşturur — DAİMA `status: 'PAUSED'` (taslak, kullanıcı onayı ile
+ * Meta Ads Manager'dan elle yayınlanır; otomatik yayın YOK — Meta Taslak Kampanya, D5).
+ */
+export async function createCampaign(
+  brandId: string,
+  input: { name: string; objective?: string; dailyBudget?: number },
+): Promise<MetaCampaignDraft> {
+  const { token, adAccountId } = await resolveMeta(brandId);
+  const objective = input.objective ?? 'OUTCOME_ENGAGEMENT';
+  const body: Record<string, string> = {
+    name: input.name,
+    objective,
+    status: 'PAUSED',
+    special_ad_categories: '[]',
+  };
+  if (input.dailyBudget != null) {
+    body.daily_budget = String(Math.round(input.dailyBudget * 100));
+  }
+  const res = (await metaPost(token, `${adAccountId}/campaigns`, body)) as { id: string };
+  return { id: res.id, name: input.name, status: 'PAUSED', objective };
+}
+
+export interface MetaInterest {
+  id: string;
+  name: string;
+  audienceSize?: number;
+}
+
+/** Ad Set hedeflemesi için ilgi alanı önerisi arar (`GET /search?type=adinterest`). */
+export async function searchInterests(brandId: string, query: string): Promise<MetaInterest[]> {
+  const { token } = await resolveMeta(brandId);
+  const data = await metaGet<{ data: { id: string; name: string; audience_size_lower_bound?: number }[] }>(
+    token,
+    'search',
+    { type: 'adinterest', q: query, limit: '5' },
+  );
+  return data.data.map((d) => ({ id: d.id, name: d.name, audienceSize: d.audience_size_lower_bound }));
+}
+
+export interface MetaAdSetDraft {
+  id: string;
+  name: string;
+  status: string;
+}
+
+/**
+ * Yeni ad set oluşturur — DAİMA `status: 'PAUSED'` (taslak). Hedefleme: Türkiye +
+ * verilen ilgi alanı ID'leri (flexible_spec). Kampanya `PAUSED` olduğundan bu da
+ * yayına çıkmaz, sadece Meta Ads Manager'da taslak olarak görünür.
+ */
+export async function createAdSet(
+  brandId: string,
+  input: {
+    campaignId: string;
+    name: string;
+    dailyBudget: number;
+    interestIds: string[];
+    optimizationGoal?: string;
+    billingEvent?: string;
+  },
+): Promise<MetaAdSetDraft> {
+  const { token, adAccountId } = await resolveMeta(brandId);
+  const targeting: Record<string, unknown> = { geo_locations: { countries: ['TR'] } };
+  if (input.interestIds.length > 0) {
+    targeting.flexible_spec = [{ interests: input.interestIds.map((id) => ({ id })) }];
+  }
+  const body: Record<string, string> = {
+    name: input.name,
+    campaign_id: input.campaignId,
+    daily_budget: String(Math.round(input.dailyBudget * 100)),
+    billing_event: input.billingEvent ?? 'IMPRESSIONS',
+    optimization_goal: input.optimizationGoal ?? 'LINK_CLICKS',
+    targeting: JSON.stringify(targeting),
+    status: 'PAUSED',
+  };
+  const res = (await metaPost(token, `${adAccountId}/adsets`, body)) as { id: string };
+  return { id: res.id, name: input.name, status: 'PAUSED' };
+}

@@ -1,0 +1,45 @@
+{
+  "name": "VELORA Daily Brief (03:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "triggerAtHour": 3 }]
+        }
+      },
+      "name": "Her gün 03:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3000/api/webhooks/n8n",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event", "value": "daily.brief" },
+            { "name": "queue", "value": "dailyBrief" }
+          ]
+        }
+      },
+      "name": "Daily Brief Tetikle",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Her gün 03:00": {
+      "main": [[{ "node": "Daily Brief Tetikle", "type": "main", "index": 0 }]]
+    }
+  }
+}

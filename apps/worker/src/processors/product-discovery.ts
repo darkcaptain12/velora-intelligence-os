@@ -1,8 +1,8 @@
 import type { Job } from 'bullmq';
 import type { JobDataMap } from '@velora/queue';
-import { opportunities, tasks, type OpportunityKind } from '@velora/db';
+import { opportunities, events, tasks, type OpportunityKind } from '@velora/db';
 import { getAdapter } from '@velora/scraping';
-import { scoreOpportunity, computeSeasonality, computePriority } from '@velora/core';
+import { scoreOpportunity, computeSeasonality, computePriority, scoreEvent } from '@velora/core';
 import { ScrapeBlockedError } from '@velora/shared';
 import { isoWeek } from '../lib/iso-week';
 import { upcomingSpecialDays } from '../lib/special-days';
@@ -32,8 +32,11 @@ function estimateMarketSize(s: string): number {
 
 /**
  * Ürün Keşif Merkezi (sistemin kalbi). 3 tip fırsat üretir:
- *  TREND (Google Trends TR) · EVENT (yaklaşan özel günler) · PROBLEM (Şikayetvar, best-effort).
+ *  TREND (Google Trends TR) · EVENT (Global Event Calendar) · PROBLEM (Şikayetvar, best-effort).
  * Her fırsat: 6-boyut opportunityScore + seasonalityScore + priorityScore (validation yok → base=opp).
+ * EVENT: 180 gün ufukta tüm etkinlikler CommercialEvent'e yazılır (Etkinlik Skoru ile); yalnızca
+ * hazırlık penceresine girenler (daysUntil<=prepLeadDays) ve henüz bağlı fırsatı olmayanlar
+ * Opportunity'ye dönüştürülür (idempotent — linkedOpportunityId).
  * Engellenen best-effort kaynaklar → manuel doğrulama görevi (yeniden denenmez).
  */
 export async function processProductDiscovery(job: Job<JobDataMap['productDiscovery']>) {
@@ -54,9 +57,9 @@ export async function processProductDiscovery(job: Job<JobDataMap['productDiscov
     seasonality: number;
     eventDate?: Date;
     rationale: string;
-  }) => {
+  }): Promise<string | null> => {
     const key = o.title.toLowerCase().slice(0, 80);
-    if (seen.has(key)) return;
+    if (seen.has(key)) return null;
     seen.add(key);
     const score = scoreOpportunity({
       demand: o.demand,
@@ -84,6 +87,7 @@ export async function processProductDiscovery(job: Job<JobDataMap['productDiscov
       status: 'SCORED',
     });
     created += 1;
+    return opp.id;
   };
 
   // 1) TREND — Google Trends TR (güvenilir)
@@ -108,21 +112,43 @@ export async function processProductDiscovery(job: Job<JobDataMap['productDiscov
     logger.warn({ err: (err as Error).message }, 'Google Trends keşfi atlandı');
   }
 
-  // 2) EVENT — yaklaşan özel günler (45 gün)
-  for (const sd of upcomingSpecialDays(45)) {
-    await save({
-      title: `${sd.name} koleksiyonu`,
-      niche: sd.name,
-      kind: 'EVENT',
-      signals: { event: sd.name, daysUntil: sd.daysUntil, themes: sd.themes },
-      demand: 66,
-      competition: 50,
-      trend: 60,
-      marketSize: 72,
-      seasonality: computeSeasonality({ daysUntilEvent: sd.daysUntil }),
-      eventDate: sd.date,
-      rationale: `${sd.daysUntil} gün sonra ${sd.name}. Sezon penceresi açık — şimdi üretip yetiştirilebilir.`,
+  // 2) EVENT — Global Event Calendar (180 gün ufuk)
+  for (const sd of upcomingSpecialDays(180)) {
+    const eventScore = scoreEvent({
+      trendPotential: sd.trendPotential,
+      salesPotential: sd.salesPotential,
+      daysUntil: sd.daysUntil,
+      prepLeadDays: sd.prepLeadDays,
     });
+
+    const event = await events.upsert({
+      brandId,
+      name: sd.name,
+      category: sd.category,
+      eventDate: sd.date,
+      prepLeadDays: sd.prepLeadDays,
+      trendPotential: sd.trendPotential,
+      salesPotential: sd.salesPotential,
+      eventScore,
+    });
+
+    // Hazırlık penceresine girdiyse ve henüz bağlı fırsatı yoksa → Opportunity'ye dönüştür (idempotent)
+    if (sd.daysUntil <= sd.prepLeadDays && !event.linkedOpportunityId) {
+      const oppId = await save({
+        title: `${sd.name} koleksiyonu`,
+        niche: sd.name,
+        kind: 'EVENT',
+        signals: { event: sd.name, daysUntil: sd.daysUntil, themes: sd.themes, eventScore },
+        demand: eventScore.salesPotential,
+        competition: 50,
+        trend: eventScore.trendPotential,
+        marketSize: eventScore.total,
+        seasonality: computeSeasonality({ daysUntilEvent: sd.daysUntil }),
+        eventDate: sd.date,
+        rationale: `${sd.daysUntil} gün sonra ${sd.name}. Sezon penceresi açık — şimdi üretip yetiştirilebilir. (Etkinlik Skoru: ${eventScore.total})`,
+      });
+      if (oppId) await events.linkOpportunity(event.id, oppId);
+    }
   }
 
   // 3) PROBLEM — Şikayetvar (best-effort; engellenirse manuel görev)

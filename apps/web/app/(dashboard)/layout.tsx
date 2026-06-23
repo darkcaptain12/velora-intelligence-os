@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getActiveBrand } from '@/lib/brand';
 import { Sidebar } from '@/components/sidebar';
+import { MobileNav } from '@/components/mobile-nav';
 import { LogoutButton } from '@/components/logout-button';
+import { JarvisOrb } from '@/components/jarvis-orb';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -29,8 +31,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <aside className="hidden min-h-[calc(100vh-3.5rem)] w-60 shrink-0 border-r bg-background md:block">
           <Sidebar />
         </aside>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8 pb-20 md:pb-8">{children}</main>
       </div>
+      <MobileNav />
+      <JarvisOrb />
     </div>
   );
 }
