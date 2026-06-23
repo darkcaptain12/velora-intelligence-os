@@ -10,11 +10,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const checks: Record<string, boolean> = { db: false, redis: false, storage: false };
 
+  let dbError = '';
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.db = true;
-  } catch {
-    /* db down */
+  } catch (e) {
+    dbError = (e as Error).message?.slice(0, 200) ?? 'unknown';
   }
 
   try {
@@ -32,5 +33,5 @@ export async function GET() {
   }
 
   const ok = Object.values(checks).every(Boolean);
-  return NextResponse.json({ ok, checks, ts: new Date().toISOString() }, { status: ok ? 200 : 503 });
+  return NextResponse.json({ ok, checks, dbError: dbError || undefined, ts: new Date().toISOString() }, { status: ok ? 200 : 503 });
 }
