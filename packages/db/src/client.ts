@@ -5,22 +5,22 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createClient(): PrismaClient {
   const dbUrl = process.env.DATABASE_URL ?? '';
+  const { PrismaClient: Client } = require('@prisma/client');
 
+  // queryCompiler modunda engine binary YOK — adapter zorunlu.
   if (dbUrl.includes('neon')) {
-    // Vercel/Neon: WebSocket driver adapter — native binary engine YOK
-    const { PrismaClient: NeonPrisma } = require('@prisma/client');
+    // Vercel / Neon: WebSocket sürücüsü
     const { neonConfig } = require('@neondatabase/serverless');
     const { PrismaNeon } = require('@prisma/adapter-neon');
     try { neonConfig.webSocketConstructor = require('ws'); } catch {}
-    // v6.19 API: PrismaNeon takes a PoolConfig ({ connectionString }), NOT a Pool
     const adapter = new PrismaNeon({ connectionString: dbUrl });
-    return new NeonPrisma({ adapter }) as PrismaClient;
+    return new Client({ adapter }) as PrismaClient;
   }
 
-  const { PrismaClient: NodePrisma } = require('@prisma/client');
-  return new NodePrisma({
-    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
-  }) as PrismaClient;
+  // Lokal Docker Postgres: standart TCP (node-postgres)
+  const { PrismaPg } = require('@prisma/adapter-pg');
+  const adapter = new PrismaPg({ connectionString: dbUrl });
+  return new Client({ adapter }) as PrismaClient;
 }
 
 export const prisma: PrismaClient = globalForPrisma.prisma ?? createClient();

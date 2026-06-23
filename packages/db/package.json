@@ -23,15 +23,18 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@prisma/adapter-neon": "^6.19.3",
+    "@prisma/adapter-pg": "6.19.3",
     "@prisma/client": "^6.2.1",
     "@velora/config": "workspace:*",
     "@velora/core": "workspace:*",
     "@velora/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
+    "pg": "^8.22.0",
     "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/pg": "^8.20.0",
     "@types/ws": "^8.18.1",
     "dotenv-cli": "^7.4.4",
     "prisma": "^6.2.1",

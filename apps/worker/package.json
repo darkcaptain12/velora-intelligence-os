@@ -9,6 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "6.19.3",
+    "@prisma/adapter-pg": "6.19.3",
     "@velora/ai": "workspace:*",
     "@velora/config": "workspace:*",
     "@velora/core": "workspace:*",
@@ -16,12 +19,14 @@
     "@velora/integrations": "workspace:*",
     "@velora/queue": "workspace:*",
     "@velora/scraping": "workspace:*",
-    "@velora/storage": "workspace:*",
     "@velora/shared": "workspace:*",
+    "@velora/storage": "workspace:*",
     "bullmq": "^5.34.6",
+    "pg": "^8.22.0",
     "pino": "^9.5.0",
     "sharp": "^0.33.5",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
