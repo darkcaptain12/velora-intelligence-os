@@ -45,3 +45,6 @@ infra/data/
 coverage/
 test-results/
 playwright-report/
+.vercel
+apps/web/.prisma/
+.prisma/
