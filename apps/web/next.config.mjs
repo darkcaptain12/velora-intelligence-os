@@ -9,6 +9,7 @@ config({ path: path.resolve(__dirname, '../../.env') });
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   outputFileTracingRoot: path.resolve(__dirname, '../../'),
   transpilePackages: [
     '@velora/db',
