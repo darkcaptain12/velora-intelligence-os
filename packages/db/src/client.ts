@@ -7,12 +7,14 @@ function createClient(): PrismaClient {
   const dbUrl = process.env.DATABASE_URL ?? '';
 
   if (dbUrl.includes('neon.tech') || dbUrl.includes('neon.')) {
-    const { Pool, neonConfig } = require('@neondatabase/serverless') as any;
-    const { PrismaNeon } = require('@prisma/adapter-neon') as any;
+    // Vercel/Neon: edge client + WebSocket adapter — binary engine YOK
+    const edge = require('@prisma/client/edge');
+    const { Pool, neonConfig } = require('@neondatabase/serverless');
+    const { PrismaNeon } = require('@prisma/adapter-neon');
     try { neonConfig.webSocketConstructor = require('ws'); } catch {}
-    const pool = new (Pool as any)({ connectionString: dbUrl });
-    const adapter = new (PrismaNeon as any)(pool);
-    return new PrismaClient({ adapter } as any);
+    const pool = new Pool({ connectionString: dbUrl });
+    const adapter = new PrismaNeon(pool);
+    return new edge.PrismaClient({ adapter }) as PrismaClient;
   }
 
   return new PrismaClient({
@@ -20,7 +22,7 @@ function createClient(): PrismaClient {
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? createClient();
+export const prisma: PrismaClient = globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
