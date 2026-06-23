@@ -23,6 +23,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@neondatabase/serverless':
+        specifier: ^1.1.0
+        version: 1.1.0
+      '@prisma/adapter-neon':
+        specifier: ^7.8.0
+        version: 7.8.0
       '@radix-ui/react-slot':
         specifier: ^1.1.1
         version: 1.2.5(@types/react@18.3.31)(react@18.3.1)
@@ -86,6 +92,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.19(tsx@4.22.4))
+      ws:
+        specifier: ^8.21.0
+        version: 8.21.0
       zod:
         specifier: ^3.24.1
         version: 3.25.76

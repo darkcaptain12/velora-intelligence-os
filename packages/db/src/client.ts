@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -6,15 +8,11 @@ function createClient(): PrismaClient {
   const dbUrl = process.env.DATABASE_URL ?? '';
 
   if (dbUrl.includes('neon.tech')) {
-    // Neon serverless adapter — native binary gerektirmez (Vercel uyumlu)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Pool, neonConfig } = require('@neondatabase/serverless');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PrismaNeon } = require('@prisma/adapter-neon');
-    try { neonConfig.webSocketConstructor = require('ws'); } catch { /* browser */ }
+    try { neonConfig.webSocketConstructor = require('ws'); } catch { /* Vercel edge */ }
     const pool = new Pool({ connectionString: dbUrl });
     const adapter = new PrismaNeon(pool);
-    return new PrismaClient({ adapter } as never);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new PrismaClient({ adapter } as any);
   }
 
   return new PrismaClient({

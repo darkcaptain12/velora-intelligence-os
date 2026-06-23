@@ -25,6 +25,9 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: [
       '@prisma/client',
+      '@prisma/adapter-neon',
+      '@neondatabase/serverless',
+      'ws',
       'prisma',
       'bullmq',
       'ioredis',
