@@ -30,4 +30,4 @@ export { dailyBriefs } from './services/daily-briefs';
 
 // Prisma'nın ürettiği tüm tip ve enum'ları @velora/db üzerinden yeniden dışa aktar.
 // Böylece diğer paketler doğrudan @prisma/client'a bağımlı olmaz.
-export * from '@prisma/client';
+export type * from '@prisma/client';
