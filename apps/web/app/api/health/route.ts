@@ -11,11 +11,12 @@ export async function GET() {
   const checks: Record<string, boolean> = { db: false, redis: false, storage: false };
 
   let dbError = '';
+  const dbUrlHint = (process.env.DATABASE_URL ?? '').includes('neon') ? 'neon' : 'local';
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.db = true;
   } catch (e) {
-    dbError = (e as Error).message?.slice(0, 200) ?? 'unknown';
+    dbError = `[${dbUrlHint}] ${(e as Error).message?.slice(0, 180) ?? 'unknown'}`;
   }
 
   try {
