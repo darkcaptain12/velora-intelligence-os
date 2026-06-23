@@ -23,11 +23,11 @@ const nextConfig = {
     '@velora/storage',
   ],
   experimental: {
+    // NOT: @prisma/client + neon adapter'ları DIŞARIDA BIRAKMIYORUZ.
+    // queryCompiler WASM tabanlı (native binary yok) → Next.js bundle'a
+    // gömülür, böylece pnpm monorepo "iki @prisma/client kopyası" sorunu
+    // çözülür (serverless function tek, doğru client'ı kullanır).
     serverComponentsExternalPackages: [
-      '@prisma/client',
-      '@prisma/adapter-neon',
-      '@neondatabase/serverless',
-      'ws',
       'prisma',
       'bullmq',
       'ioredis',
