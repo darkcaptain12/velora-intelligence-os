@@ -3,8 +3,8 @@
 // Detaylı tasarım: docs/ARCHITECTURE.md §5
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters", "queryCompiler"]
+  provider   = "prisma-client-js"
+  engineType = "client"
 }
 
 datasource db {
